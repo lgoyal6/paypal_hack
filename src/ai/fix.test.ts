@@ -29,5 +29,5 @@ test('diff applies on a new branch in a worktree, leaving the working tree alone
   assert.match(readFileSync(join(out.worktree, 'src/hook.js'), 'utf8'), /dispute_amount/);
   assert.match(readFileSync(join(repo, 'app/src/hook.js'), 'utf8'), /r\.amount\.value/); // untouched
   assert.equal(g('rev-parse', '--abbrev-ref', 'HEAD').trim(), 'main');
-  removeWorktree(repo, out.worktree.replace(/\/app\/?$/, ''));
+  removeWorktree(repo, out.root);
 });

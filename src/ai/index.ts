@@ -13,3 +13,4 @@ export { readCodeFiles } from './llm.ts';
 export { doctor } from './doctor.ts';
 export { runPlan } from './ask.ts';
 export { applyOnBranch, removeWorktree } from './branch.ts';
+export { heal } from './heal.ts';
