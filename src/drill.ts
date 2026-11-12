@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import { register } from './registry.js';
 import { startRelay, formatDelivery } from './relay/relay.js';
 import { runChaos } from './relay/chaos.js';
-import { SCENARIOS } from './scenarios/triggers.js';
+import { allScenarios, type Scenario } from './scenarios/triggers.js';
+import { loadConfig } from './scenarios/yaml.js';
 import type { CheckResult, DrillEvent, DrillResult, ScenarioResult } from './contract.js';
 
 function flag(args: string[], name: string): string | undefined {
@@ -30,7 +31,9 @@ function waitFor(seen: Map<string, DrillEvent>, before: Set<string>, types: stri
 
 export async function drill(opts: {
   forwardTo: string; scenarios: string[]; timeoutMs: number; simulateAfterMs?: number; log: (l: string) => void;
+  registry?: Record<string, Scenario>;
 }): Promise<DrillResult> {
+  const SCENARIOS = opts.registry ?? await allScenarios();
   const { forwardTo, scenarios, timeoutMs, simulateAfterMs = 45 * 60_000, log } = opts;
   const startedAt = new Date().toISOString();
   log(`Opening a tunnel and registering a sandbox webhook -> ${forwardTo}`);
@@ -50,11 +53,12 @@ export async function drill(opts: {
       try {
         const out = await s.run((l) => log(`  ${l}`), { waitMs: simulateAfterMs, simulate: (t) => relay.simulate(t) });
         entry.simulated = (out.simulated as string[] | undefined) ?? [];
-        const got = await waitFor(relay.seen, before, s.expects, timeoutMs);
+        const wait = s.timeoutMs ?? timeoutMs;
+        const got = await waitFor(relay.seen, before, s.expects, wait);
         for (const t of s.expects) {
           const d = got.get(t);
           entry.delivered[t] = d ? { source: d.source, eventId: d.event.id } : null;
-          if (!d) log(`  MISSING ${t}: not delivered within ${timeoutMs / 1000}s`);
+          if (!d) log(`  MISSING ${t}: not delivered within ${wait / 1000}s`);
         }
       } catch (e) {
         entry.error = (e as Error).message;
@@ -93,12 +97,14 @@ export async function drill(opts: {
 register('drill', {
   describe: 'Real sandbox events plus chaos against your handler: paydrill drill --forward-to <url>',
   async run(args) {
-    const forwardTo = flag(args, 'forward-to');
-    if (!forwardTo) throw new Error('--forward-to is required');
+    const cfg = loadConfig();
+    const forwardTo = flag(args, 'forward-to') ?? cfg?.forwardTo;
+    if (!forwardTo) throw new Error('--forward-to is required (or set forwardTo in paydrill.yml; paydrill init writes it)');
+    const registry = await allScenarios();
     const names = (flag(args, 'scenarios') ?? 'payment,refund').split(',');
-    for (const n of names) if (!SCENARIOS[n]) throw new Error(`Unknown scenario "${n}"`);
+    for (const n of names) if (!registry[n]) throw new Error(`Unknown scenario "${n}". Try: ${Object.keys(registry).join(', ')}`);
     const result = await drill({
-      forwardTo, scenarios: names, log: console.log,
+      forwardTo, scenarios: names, log: console.log, registry,
       timeoutMs: Number(flag(args, 'timeout') ?? 120) * 1000,
       simulateAfterMs: Number(flag(args, 'simulate-after') ?? 2700) * 1000,
     });

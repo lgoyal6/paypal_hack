@@ -7,6 +7,8 @@ import { readyToAdjudicate, advance } from './disputes.js';
 export interface Scenario {
   describe: string;
   expects: string[];
+  /** Per-scenario wait for expected events (paydrill.yml "within"); the drill's --timeout otherwise. */
+  timeoutMs?: number;
   run(log: (line: string) => void, opts?: { waitMs?: number; simulate?: (eventType: string) => Promise<string> }): Promise<Record<string, unknown>>;
 }
 
@@ -106,10 +108,20 @@ export const SCENARIOS: Record<string, Scenario> = {
   },
 };
 
+/** Built-in scenarios plus paydrill.yml ones. A YAML name that shadows a built-in is an error, not a silent override. */
+export async function allScenarios(): Promise<Record<string, Scenario>> {
+  const { yamlScenarios } = await import('./yaml.js');
+  const custom = yamlScenarios();
+  for (const n of Object.keys(custom)) {
+    if (SCENARIOS[n]) throw new Error(`paydrill.yml scenario "${n}" has the same name as a built-in scenario; rename it`);
+  }
+  return { ...SCENARIOS, ...custom };
+}
+
 register('scenarios', {
   describe: 'List trigger scenarios and the events they produce',
   async run() {
-    for (const [name, s] of Object.entries(SCENARIOS)) {
+    for (const [name, s] of Object.entries(await allScenarios())) {
       console.log(`${name.padEnd(15)} ${s.describe}\n${' '.repeat(16)}-> ${s.expects.join(', ')}`);
     }
   },
@@ -119,8 +131,9 @@ register('trigger', {
   describe: 'Create real sandbox money movement: paydrill trigger <scenario>',
   async run(args) {
     const name = args[0];
-    const s = name ? SCENARIOS[name] : undefined;
-    if (!s) throw new Error(`Unknown scenario "${name ?? ''}". Try: ${Object.keys(SCENARIOS).join(', ')}`);
+    const all = await allScenarios();
+    const s = name ? all[name] : undefined;
+    if (!s) throw new Error(`Unknown scenario "${name ?? ''}". Try: ${Object.keys(all).join(', ')}`);
     console.log(`${name}: ${s.describe}`);
     await s.run((l) => console.log(`  ${l}`));
     console.log(`expect: ${s.expects.join(', ')}`);
