@@ -54,15 +54,20 @@ export async function handledEvents(files: CodeFile[], useAi = true): Promise<{ 
 export interface Coverage {
   handled: string[]; missing: string[]; exercised: string[]; notExercised: string[];
   where: Record<string, string>; total: number; percent: number;
+  /** Exercised only by PayPal's webhook simulator (real delivery, mock payload). Always shown, per CONTRACT rule 6. */
+  simulatedOnly: string[];
 }
 
 export function coverage(handled: Map<string, string>, drill: DrillResult | null, universe = KNOWN_EVENT_TYPES): Coverage {
   const h = [...handled.keys()].filter((t) => universe.includes(t)).sort();
-  const ok = new Set(drill?.deliveries
-    .filter((d) => (d.source === 'live' || d.source === 'backfill') && d.response.status >= 200 && d.response.status < 300)
+  const answered = (sources: string[]) => new Set(drill?.deliveries
+    .filter((d) => sources.includes(d.source) && d.response.status >= 200 && d.response.status < 300)
     .map((d) => d.event.event_type) ?? []);
+  const real = answered(['live', 'backfill']);
+  const ok = answered(['live', 'backfill', 'paypal-simulated']);
   const exercised = h.filter((t) => ok.has(t));
   return {
+    simulatedOnly: exercised.filter((t) => !real.has(t)),
     handled: h, missing: universe.filter((t) => !handled.has(t)), exercised, notExercised: h.filter((t) => !ok.has(t)),
     where: Object.fromEntries([...handled].filter(([t]) => h.includes(t))), total: universe.length,
     percent: Math.round((exercised.length / universe.length) * 100),
@@ -74,7 +79,8 @@ export function formatCoverage(c: Coverage): string {
   return [
     `handled    ${c.handled.length} / ${c.total} event types your account can emit`,
     `missing    ${more(c.missing) || 'none'}`,
-    `exercised  ${c.exercised.length} / ${c.handled.length} handled types were hit by a real drill event and answered 2xx`,
+    `exercised  ${c.exercised.length} / ${c.handled.length} handled types were hit by a drill event and answered 2xx`,
+    ...(c.simulatedOnly.length ? [`           simulated by PayPal (mock payload): ${c.simulatedOnly.join(', ')}`] : []),
   ].join('\n');
 }
 

@@ -1,72 +1,84 @@
 {
-  "_source": "docs",
-  "id": "WH-4M0448861G563140B-9EX36365822141321",
+  "_source": "sandbox",
+  "id": "WH-87T93055550674629-4PY16058HA276592N",
   "event_version": "1.0",
-  "create_time": "2026-11-12T18:00:00Z",
+  "create_time": "2026-11-12T09:40:23.210Z",
   "resource_type": "dispute",
-  "resource_version": "2.0",
   "event_type": "CUSTOMER.DISPUTE.CREATED",
-  "summary": "A new dispute opened with Case # PP-D-27803",
+  "summary": "A new dispute opened with case # PP-R-ATU-10200173",
   "resource": {
-    "dispute_id": "PP-D-27803",
-    "create_time": "2026-11-12T18:00:00Z",
-    "update_time": "2026-11-12T18:00:00Z",
+    "dispute_id": "PP-R-ATU-10200173",
+    "create_time": "2026-11-12T09:37:30.700Z",
+    "update_time": "2026-11-12T09:40:14.142Z",
     "disputed_transactions": [
       {
-        "seller_transaction_id": "2GG279541U471931P",
-        "buyer_transaction_id": "9TU74853VJ291784G",
-        "create_time": "2026-11-12T18:00:00Z",
-        "transaction_status": "COMPLETED",
-        "gross_amount": {
-          "currency_code": "USD",
-          "value": "49.99"
-        },
-        "invoice_number": "INV-1042",
-        "custom": "order_1042",
-        "buyer": {
-          "name": "John Doe"
-        },
+        "buyer_transaction_id": "25N36459K90227037",
+        "seller_transaction_id": "7BF61577L33141349",
+        "transaction_status": "HELD",
         "seller": {
-          "merchant_id": "7KNGBPH2U58GQ",
-          "name": "Demo Shop"
-        }
+          "merchant_id": "JQ7EXX22H2NR4",
+          "name": "Test Store"
+        },
+        "seller_protection_eligible": false,
+        "seller_protection_type": "SELLER_PROTECTION_INELIGIBLE"
       }
     ],
-    "reason": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
-    "status": "WAITING_FOR_SELLER_RESPONSE",
+    "reason": "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
+    "status": "UNDER_REVIEW",
     "dispute_amount": {
       "currency_code": "USD",
-      "value": "49.99"
+      "value": "12.00"
     },
+    "external_reason_code": "1330",
+    "fund_movements": [
+      {
+        "party": "SELLER",
+        "amount": {
+          "currency_code": "USD",
+          "value": "12.00"
+        },
+        "initiated_time": "2026-11-12T09:40:23.000Z",
+        "type": "DEBIT",
+        "reason": "HOLD_PLACED"
+      }
+    ],
     "dispute_life_cycle_stage": "CHARGEBACK",
     "dispute_channel": "EXTERNAL",
-    "seller_response_due_date": "2026-11-22T18:00:00Z",
+    "offer": {
+      "buyer_requested_amount": {
+        "currency_code": "USD",
+        "value": "12.00"
+      }
+    },
+    "refund_details": {
+      "allowed_refund_amount": {
+        "currency_code": "USD",
+        "value": "12.00"
+      }
+    },
     "links": [
       {
-        "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-D-27803",
+        "href": "https://api.sandbox.paypal.com/v1/customer/disputes/PP-R-ATU-10200173",
         "rel": "self",
-        "method": "GET"
+        "method": "GET",
+        "encType": "application/json"
       },
       {
-        "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-D-27803/provide-evidence",
-        "rel": "provide_evidence",
-        "method": "POST"
-      },
-      {
-        "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-D-27803/accept-claim",
-        "rel": "accept_claim",
-        "method": "POST"
+        "href": "https://api.sandbox.paypal.com/v1/customer/disputes/PP-R-ATU-10200173/provide-supporting-info",
+        "rel": "provide_supporting_info",
+        "method": "POST",
+        "encType": "application/json"
       }
     ]
   },
   "links": [
     {
-      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-4M0448861G563140B-9EX36365822141321",
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-87T93055550674629-4PY16058HA276592N",
       "rel": "self",
       "method": "GET"
     },
     {
-      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-4M0448861G563140B-9EX36365822141321/resend",
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-87T93055550674629-4PY16058HA276592N/resend",
       "rel": "resend",
       "method": "POST"
     }

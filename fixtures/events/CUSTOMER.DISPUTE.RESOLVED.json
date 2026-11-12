@@ -1,79 +1,152 @@
 {
-  "_source": "docs",
-  "id": "WH-1KY72766PP1137005-2S1012219E3125620",
+  "_source": "sandbox",
+  "id": "WH-37774563ED3729412-91223653NK8516214",
   "event_version": "1.0",
-  "create_time": "2026-11-12T18:00:00Z",
+  "create_time": "2026-11-12T09:53:03.581Z",
   "resource_type": "dispute",
-  "resource_version": "2.0",
   "event_type": "CUSTOMER.DISPUTE.RESOLVED",
-  "summary": "A dispute was resolved with Case # PP-D-27803",
+  "summary": "A dispute was resolved with case # PP-R-LSP-10200167",
   "resource": {
-    "dispute_id": "PP-D-27803",
-    "create_time": "2026-11-12T18:00:00Z",
-    "update_time": "2026-11-12T18:00:00Z",
+    "dispute_id": "PP-R-LSP-10200167",
+    "create_time": "2026-11-12T09:18:29.264Z",
+    "update_time": "2026-11-12T09:52:34.034Z",
     "disputed_transactions": [
       {
-        "seller_transaction_id": "2GG279541U471931P",
-        "buyer_transaction_id": "9TU74853VJ291784G",
-        "create_time": "2026-11-12T18:00:00Z",
+        "buyer_transaction_id": "24K74620BX826592P",
+        "seller_transaction_id": "3YS0429851730131G",
         "transaction_status": "COMPLETED",
-        "gross_amount": {
-          "currency_code": "USD",
-          "value": "49.99"
-        },
-        "invoice_number": "INV-1042",
-        "custom": "order_1042",
-        "buyer": {
-          "name": "John Doe"
-        },
         "seller": {
-          "merchant_id": "7KNGBPH2U58GQ",
-          "name": "Demo Shop"
-        }
+          "merchant_id": "JQ7EXX22H2NR4",
+          "name": "Test Store"
+        },
+        "seller_protection_eligible": false,
+        "seller_protection_type": "SELLER_PROTECTION_INELIGIBLE"
       }
     ],
-    "reason": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+    "reason": "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
     "status": "RESOLVED",
     "dispute_amount": {
       "currency_code": "USD",
-      "value": "49.99"
+      "value": "12.00"
     },
-    "dispute_life_cycle_stage": "CHARGEBACK",
-    "dispute_channel": "EXTERNAL",
-    "seller_response_due_date": "2026-11-22T18:00:00Z",
-    "links": [
-      {
-        "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-D-27803",
-        "rel": "self",
-        "method": "GET"
-      },
-      {
-        "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-D-27803/provide-evidence",
-        "rel": "provide_evidence",
-        "method": "POST"
-      },
-      {
-        "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-D-27803/accept-claim",
-        "rel": "accept_claim",
-        "method": "POST"
-      }
-    ],
+    "external_reason_code": "1330",
     "dispute_outcome": {
       "outcome_code": "RESOLVED_BUYER_FAVOUR",
+      "outcome_reason": "INELIGIBLE_SELLER_PROTECTION_POLICY",
       "amount_refunded": {
         "currency_code": "USD",
-        "value": "49.99"
+        "value": "12.00"
       }
-    }
+    },
+    "adjudications": [
+      {
+        "type": "RECOVER_FROM_SELLER",
+        "adjudication_time": "2026-11-12T09:44:31.385Z",
+        "reason": "INELIGIBLE_SELLER_PROTECTION_POLICY",
+        "dispute_life_cycle_stage": "CHARGEBACK"
+      },
+      {
+        "type": "RECOVER_FROM_SELLER",
+        "adjudication_time": "2026-11-12T09:51:23.430Z",
+        "reason": "INELIGIBLE_SELLER_PROTECTION_POLICY",
+        "dispute_life_cycle_stage": "CHARGEBACK"
+      }
+    ],
+    "money_movements": [
+      {
+        "affected_party": "SELLER",
+        "amount": {
+          "currency_code": "USD",
+          "value": "12.00"
+        },
+        "initiated_time": "2026-11-12T09:45:35.513Z",
+        "type": "DEBIT",
+        "reason": "DISPUTE_SETTLEMENT"
+      },
+      {
+        "affected_party": "SELLER",
+        "amount": {
+          "currency_code": "USD",
+          "value": "0.80"
+        },
+        "initiated_time": "2026-11-12T09:45:35.513Z",
+        "type": "DEBIT",
+        "reason": "DISPUTE_SETTLEMENT_FEE"
+      }
+    ],
+    "fund_movements": [
+      {
+        "party": "SELLER",
+        "amount": {
+          "currency_code": "USD",
+          "value": "11.20"
+        },
+        "initiated_time": "2026-11-12T09:21:34.000Z",
+        "type": "DEBIT",
+        "reason": "HOLD_PLACED"
+      },
+      {
+        "party": "SELLER",
+        "amount": {
+          "currency_code": "USD",
+          "value": "11.20"
+        },
+        "initiated_time": "2026-11-12T09:45:34.000Z",
+        "type": "CREDIT",
+        "reason": "HOLD_RELEASED"
+      },
+      {
+        "party": "SELLER",
+        "amount": {
+          "currency_code": "USD",
+          "value": "12.00"
+        },
+        "initiated_time": "2026-11-12T09:45:35.513Z",
+        "type": "DEBIT",
+        "reason": "DISPUTE_SETTLEMENT"
+      }
+    ],
+    "dispute_life_cycle_stage": "CHARGEBACK",
+    "dispute_channel": "EXTERNAL",
+    "offer": {
+      "buyer_requested_amount": {
+        "currency_code": "USD",
+        "value": "12.00"
+      }
+    },
+    "refund_details": {
+      "allowed_refund_amount": {
+        "currency_code": "USD",
+        "value": "12.00"
+      },
+      "transactions": [
+        {
+          "id": "2L757096460218709",
+          "gross_amount": {
+            "currency_code": "USD",
+            "value": "12.00"
+          },
+          "create_time": "2026-11-12T09:45:35.000Z"
+        }
+      ]
+    },
+    "links": [
+      {
+        "href": "https://api.sandbox.paypal.com/v1/customer/disputes/PP-R-LSP-10200167",
+        "rel": "self",
+        "method": "GET",
+        "encType": "application/json"
+      }
+    ]
   },
   "links": [
     {
-      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-1KY72766PP1137005-2S1012219E3125620",
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-37774563ED3729412-91223653NK8516214",
       "rel": "self",
       "method": "GET"
     },
     {
-      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-1KY72766PP1137005-2S1012219E3125620/resend",
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-37774563ED3729412-91223653NK8516214/resend",
       "rel": "resend",
       "method": "POST"
     }

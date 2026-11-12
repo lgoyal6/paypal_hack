@@ -37,6 +37,8 @@ export async function forward(
 
 export interface Relay {
   bus: EventEmitter; // emits 'delivery' with a DrillEvent
+  /** Ask PayPal's simulator for an event; its delivery is labeled paypal-simulated. */
+  simulate(eventType: string): Promise<string>;
   seen: Map<string, DrillEvent>;
   webhookId: string;
   url: string;
@@ -53,6 +55,7 @@ export async function startRelay(opts: {
   const { forwardTo, port = 4807, backfill = true, backfillAfterMs = 20_000 } = opts;
   const bus = new EventEmitter();
   const seen = new Map<string, DrillEvent>();
+  const simulatedIds = new Set<string>();
   const startedAt = new Date(Date.now() - 5_000).toISOString();
   let webhookId = '';
 
@@ -81,7 +84,8 @@ export async function startRelay(opts: {
         res.writeHead(200); res.end();
         return;
       }
-      const d = await deliver(event, headers, prior ? 'live-retry' : 'live', signature);
+      const source: EventSource = simulatedIds.has(event.id) ? 'paypal-simulated' : prior ? 'live-retry' : 'live';
+      const d = await deliver(event, headers, source, signature);
       // Pass the app's answer back so PayPal's own retry behaviour stays realistic.
       res.writeHead(d.response.status >= 200 && d.response.status < 300 ? 200 : 500);
       res.end();
@@ -120,6 +124,13 @@ export async function startRelay(opts: {
 
   return {
     bus, seen, webhookId, url: tunnel.url, forwardTo,
+    async simulate(eventType) {
+      const { eventId } = await paypal.simulateEvent(webhookId, eventType);
+      simulatedIds.add(eventId);
+      const early = seen.get(eventId); // delivery can beat the API response
+      if (early) early.source = 'paypal-simulated';
+      return eventId;
+    },
     async close() {
       if (poller) clearInterval(poller);
       await paypal.deleteWebhook(webhookId).catch(() => {});

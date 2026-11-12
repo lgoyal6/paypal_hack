@@ -26,7 +26,8 @@ export type EventSource =
   | 'chaos-duplicate'
   | 'chaos-reorder'
   | 'chaos-forged'    // tampered copy, no valid signature; a safe handler must reject it
-  | 'chaos-unknown';  // made-up event type; a safe handler must still answer 2xx
+  | 'chaos-unknown'   // made-up event type; a safe handler must still answer 2xx
+  | 'paypal-simulated'; // sent by PayPal's webhook simulator: real delivery and signature, mock payload, no real money movement
 
 export type SignatureStatus = 'verified' | 'invalid' | 'unsigned' | 'error';
 
@@ -63,6 +64,8 @@ export interface ScenarioResult {
   expects: string[];
   delivered: Record<string, { source: EventSource; eventId: string } | null>; // null = never arrived
   error: string | null;
+  /** Event types this scenario could not produce for real and fell back to PayPal's simulator for. Always shown to the user. */
+  simulated: string[];
 }
 
 export interface DrillResult {
@@ -72,7 +75,7 @@ export interface DrillResult {
   scenarios: ScenarioResult[];
   deliveries: DrillEvent[];
   checks: CheckResult[];
-  delivery: { expected: number; live: number; backfilled: number; missing: number };
+  delivery: { expected: number; live: number; backfilled: number; simulated: number; missing: number };
 }
 
 // ---------- PayPal client (Laksh implements; needs the PayPal key) ----------
@@ -96,6 +99,8 @@ export interface PayPalClient {
   createWebhook(url: string): Promise<{ webhookId: string }>;
   deleteWebhook(webhookId: string): Promise<void>;
   verifySignature(headers: Record<string, string>, webhookId: string, event: PayPalEvent): Promise<SignatureStatus>;
+  /** PayPal's webhook simulator. Mock payload, real delivery and signature. Use only when the sandbox cannot produce the event for real. */
+  simulateEvent(webhookId: string, eventType: string): Promise<{ eventId: string }>;
 }
 
 /** All PayPal client errors are thrown as this, never swallowed. */

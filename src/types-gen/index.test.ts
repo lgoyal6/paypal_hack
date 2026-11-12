@@ -34,7 +34,7 @@ test('drift: a renamed field is reported as a possible rename, a type change as 
   const renamed = infer({ ...dispute, resource: { ...rest, amount: dispute_amount } });
   const d = drift('CUSTOMER.DISPUTE.CREATED', snap, renamed);
   assert.deepEqual(d.map((x) => [x.change, x.path]), [['possible-rename', '.resource.dispute_amount']]);
-  const retyped = infer({ ...dispute, resource: { ...dispute.resource, seller_response_due_date: 12 } });
+  const retyped = infer({ ...dispute, resource: { ...dispute.resource, reason: 12 } });
   assert.equal(drift('x', snap, retyped)[0].change, 'type-changed');
   assert.deepEqual(drift('x', snap, infer(dispute)), []);
 });

@@ -180,6 +180,11 @@ export const paypal: PayPalClient = {
     await call('DELETE', `/v1/notifications/webhooks/${webhookId}`);
   },
 
+  async simulateEvent(webhookId, eventType) {
+    const r = await call('POST', '/v1/notifications/simulate-event', { webhook_id: webhookId, event_type: eventType, resource_version: '1.0' });
+    return { eventId: r.id as string };
+  },
+
   async verifySignature(headers, webhookId, event): Promise<SignatureStatus> {
     const h = (k: string) => headers[k] ?? headers[k.toLowerCase()];
     if (!h('paypal-transmission-sig')) return 'unsigned';

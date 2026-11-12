@@ -1,49 +1,51 @@
 {
-  "_source": "docs",
-  "id": "WH-1GE84257G0350133W-6RW800890C634293G",
+  "_source": "sandbox",
+  "id": "WH-2826974153807515T-8WG796346A298212J",
   "event_version": "1.0",
-  "create_time": "2026-11-12T18:00:00Z",
+  "create_time": "2026-11-12T09:18:29.057Z",
   "resource_type": "refund",
   "resource_version": "2.0",
   "event_type": "PAYMENT.CAPTURE.REFUNDED",
-  "summary": "A $ 10.00 USD capture payment was refunded",
+  "summary": "A $ 15.0 USD capture payment was refunded",
   "resource": {
-    "id": "1Y107995YT783435V",
-    "status": "COMPLETED",
+    "id": "4NV460512X3031142",
     "amount": {
       "currency_code": "USD",
-      "value": "10.00"
+      "value": "15.00"
     },
-    "invoice_id": "INV-1042",
-    "custom_id": "order_1042",
     "seller_payable_breakdown": {
       "gross_amount": {
         "currency_code": "USD",
-        "value": "10.00"
+        "value": "15.00"
       },
       "paypal_fee": {
         "currency_code": "USD",
-        "value": "0.45"
+        "value": "0.00"
       },
       "net_amount": {
         "currency_code": "USD",
-        "value": "9.55"
+        "value": "15.00"
       },
       "total_refunded_amount": {
         "currency_code": "USD",
-        "value": "10.00"
+        "value": "15.00"
       }
     },
-    "create_time": "2026-11-12T18:00:00Z",
-    "update_time": "2026-11-12T18:00:00Z",
+    "status": "COMPLETED",
+    "create_time": "2026-11-12T01:18:24-08:00",
+    "update_time": "2026-11-12T01:18:24-08:00",
+    "payer": {
+      "email_address": "sb-merchant@business.example.com",
+      "merchant_id": "JQ7EXX22H2NR4"
+    },
     "links": [
       {
-        "href": "https://api-m.sandbox.paypal.com/v2/payments/refunds/1Y107995YT783435V",
+        "href": "https://api.sandbox.paypal.com/v2/payments/refunds/4NV460512X3031142",
         "rel": "self",
         "method": "GET"
       },
       {
-        "href": "https://api-m.sandbox.paypal.com/v2/payments/captures/2GG279541U471931P",
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/8JS50170LC776620H",
         "rel": "up",
         "method": "GET"
       }
@@ -51,12 +53,12 @@
   },
   "links": [
     {
-      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-1GE84257G0350133W-6RW800890C634293G",
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-2826974153807515T-8WG796346A298212J",
       "rel": "self",
       "method": "GET"
     },
     {
-      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-1GE84257G0350133W-6RW800890C634293G/resend",
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-2826974153807515T-8WG796346A298212J/resend",
       "rel": "resend",
       "method": "POST"
     }
