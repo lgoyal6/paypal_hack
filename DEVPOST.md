@@ -45,7 +45,7 @@ Claude uses structured outputs validated with Zod for scenario generation, failu
 
 **AG Grid Community** powers the website’s recorded event explorer. Judges can search, sort and select deliveries to inspect signature and handler results. The site replays a scrubbed record in the browser. The CLI quick start provides the runnable PayPal integration.
 
-**Render deployment:** the repository includes a Render static site Blueprint. Add the public URL here once deployment is live.
+**Render** hosts the interactive demo as a public static site built directly from the GitHub repository. Judges can open it without signing in or setting up credentials. The repository also includes a Render Blueprint.
 
 ## Challenges
 
@@ -60,7 +60,7 @@ Verify the entire repair flow on a fresh signed dispute. Run the migration parit
 ## Try it
 
 - **Source and setup:** https://github.com/lgoyal6/paypal_hack
-- **Interactive site:** add the verified Render URL.
+- **Interactive site:** https://paydrill-demo.onrender.com/
 - **Demo video:** upload the final 2:36 cut as a public YouTube video and paste its URL into Devpost.
 
 ```sh

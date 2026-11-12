@@ -1,5 +1,7 @@
 # Paydrill interactive demo
 
+[Open the deployed demo](https://paydrill-demo.onrender.com/).
+
 This browser demo uses scrubbed records from the sandbox run. The event grid is AG Grid Community. Visitors can sort and filter events, select a row to see the response and signature, and browse diagnosis, coverage, and migration examples. The terminal animation runs at approximately 95 WPM.
 
 ## Run locally
