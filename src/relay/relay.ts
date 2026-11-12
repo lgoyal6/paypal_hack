@@ -1,0 +1,138 @@
+// Receives real PayPal sandbox webhooks through a tunnel and forwards them to the developer's app.
+// Beyond a plain forwarder: verifies each signature with PayPal, and backfills events PayPal
+// recorded but never delivered (sandbox delivery is known to drop and delay events).
+import http from 'node:http';
+import { EventEmitter } from 'node:events';
+import { paypal, call } from '../paypal/client.js';
+import { openTunnel, settle } from './tunnel.js';
+import type { DrillEvent, EventSource, HandlerResponse, PayPalEvent, SignatureStatus } from '../contract.js';
+
+const PASS_HEADERS = [
+  'paypal-auth-algo', 'paypal-cert-url', 'paypal-transmission-id',
+  'paypal-transmission-sig', 'paypal-transmission-time', 'correlation-id',
+];
+
+export async function forward(
+  forwardTo: string,
+  event: PayPalEvent,
+  headers: Record<string, string>,
+  source: EventSource,
+  signature: SignatureStatus,
+): Promise<HandlerResponse> {
+  const h: Record<string, string> = {
+    'content-type': 'application/json',
+    'paydrill-source': source,
+    'paydrill-signature': signature,
+  };
+  for (const k of PASS_HEADERS) if (headers[k]) h[k] = headers[k];
+  const t0 = Date.now();
+  try {
+    const res = await fetch(forwardTo, { method: 'POST', headers: h, body: JSON.stringify(event) });
+    return { status: res.status, ms: Date.now() - t0, body: (await res.text()).slice(0, 300) };
+  } catch (e) {
+    const err = e as Error & { cause?: { code?: string } };
+    return { status: 0, ms: Date.now() - t0, body: `connection failed: ${err.cause?.code ?? err.message}` };
+  }
+}
+
+export interface Relay {
+  bus: EventEmitter; // emits 'delivery' with a DrillEvent
+  seen: Map<string, DrillEvent>;
+  webhookId: string;
+  url: string;
+  forwardTo: string;
+  close(): Promise<void>;
+}
+
+export async function startRelay(opts: {
+  forwardTo: string;
+  port?: number;
+  backfill?: boolean;
+  backfillAfterMs?: number;
+}): Promise<Relay> {
+  const { forwardTo, port = 4807, backfill = true, backfillAfterMs = 20_000 } = opts;
+  const bus = new EventEmitter();
+  const seen = new Map<string, DrillEvent>();
+  const startedAt = new Date(Date.now() - 5_000).toISOString();
+  let webhookId = '';
+
+  const deliver = async (event: PayPalEvent, headers: Record<string, string>, source: EventSource, signature: SignatureStatus) => {
+    const response = await forward(forwardTo, event, headers, source, signature);
+    const d: DrillEvent = { event, headers, source, signature, response, receivedAt: new Date().toISOString() };
+    if (!seen.has(event.id)) seen.set(event.id, d);
+    bus.emit('delivery', d);
+    return d;
+  };
+
+  const server = http.createServer((req, res) => {
+    if (req.method !== 'POST') { res.writeHead(200); res.end('paydrill relay'); return; }
+    let raw = '';
+    req.on('data', (c) => { raw += c; });
+    req.on('end', async () => {
+      let event: PayPalEvent;
+      try { event = JSON.parse(raw); } catch { res.writeHead(400); res.end(); return; }
+      const headers: Record<string, string> = {};
+      for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers[k] = v;
+      const signature = webhookId ? await paypal.verifySignature(headers, webhookId, event) : 'error';
+      const prior = seen.get(event.id);
+      if (prior?.source === 'backfill') {
+        // Already handed to the app by backfill. Forwarding again would invent a duplicate PayPal never sent twice.
+        bus.emit('warn', `PayPal delivered ${event.event_type} ${event.id} live after backfill had already forwarded it; not forwarded again`);
+        res.writeHead(200); res.end();
+        return;
+      }
+      const d = await deliver(event, headers, prior ? 'live-retry' : 'live', signature);
+      // Pass the app's answer back so PayPal's own retry behaviour stays realistic.
+      res.writeHead(d.response.status >= 200 && d.response.status < 300 ? 200 : 500);
+      res.end();
+    });
+  });
+  await new Promise<void>((r) => server.listen(port, '127.0.0.1', r));
+
+  const tunnel = await openTunnel(port);
+  try {
+    await settle();
+    // Remove webhooks left by earlier runs (PayPal caps an app at 10), then register ours.
+    for (const w of (await call('GET', '/v1/notifications/webhooks')).webhooks ?? []) {
+      if (String(w.url).includes('trycloudflare.com')) await paypal.deleteWebhook(w.id).catch(() => {});
+    }
+    webhookId = (await paypal.createWebhook(tunnel.url)).webhookId;
+  } catch (e) {
+    tunnel.close();
+    server.close();
+    throw e;
+  }
+
+  let poller: NodeJS.Timeout | null = null;
+  if (backfill) {
+    poller = setInterval(async () => {
+      try {
+        for (const ev of await paypal.listEvents(startedAt)) {
+          if (seen.has(ev.id)) continue;
+          if (Date.now() - Date.parse(ev.create_time) < backfillAfterMs) continue; // give live delivery a chance
+          await deliver(ev, {}, 'backfill', 'unsigned');
+        }
+      } catch (e) {
+        bus.emit('warn', `backfill poll failed: ${(e as Error).message}`);
+      }
+    }, 10_000);
+  }
+
+  return {
+    bus, seen, webhookId, url: tunnel.url, forwardTo,
+    async close() {
+      if (poller) clearInterval(poller);
+      await paypal.deleteWebhook(webhookId).catch(() => {});
+      tunnel.close();
+      server.close();
+    },
+  };
+}
+
+export function formatDelivery(d: DrillEvent): string {
+  const t = d.receivedAt.slice(11, 19);
+  const ok = d.response.status >= 200 && d.response.status < 300;
+  const id = (d.event.resource?.id ?? d.event.resource?.dispute_id ?? '') as string;
+  return `${t}  ${ok ? 'ok ' : 'ERR'} ${String(d.response.status).padEnd(3)} ${String(d.response.ms).padStart(5)}ms  ` +
+    `${d.source.padEnd(10)} sig:${d.signature.padEnd(8)} ${d.event.event_type} ${id}`;
+}
