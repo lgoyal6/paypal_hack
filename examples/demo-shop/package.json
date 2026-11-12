@@ -1,0 +1,7 @@
+{
+  "name": "paydrill-demo-shop",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "express": "5.3.0" }
+}
