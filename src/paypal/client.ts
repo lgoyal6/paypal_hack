@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type {
-  EvidencePacket, Money, Payment, PayPalClient, PayPalEvent, SignatureStatus,
+  CardInput, EvidencePacket, Money, Payment, PayPalClient, PayPalEvent, SignatureStatus,
 } from '../contract.js';
 import { requireEnv } from '../env.js';
 
@@ -73,11 +73,12 @@ const TEST_CARD = {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export const paypal: PayPalClient = {
-  async cardPayment(amount: Money, description = 'paydrill test order'): Promise<Payment> {
+  async cardPayment(amount: Money, description = 'paydrill test order', card?: CardInput): Promise<Payment> {
+    const source = card ? { ...TEST_CARD, ...card, name: card.name || TEST_CARD.name } : TEST_CARD;
     let order = await call('POST', '/v2/checkout/orders', {
       intent: 'CAPTURE',
       purchase_units: [{ amount, description }],
-      payment_source: { card: TEST_CARD },
+      payment_source: { card: source },
     }, { 'PayPal-Request-Id': randomUUID() });
     if (order.status !== 'COMPLETED') {
       order = await call('POST', `/v2/checkout/orders/${order.id}/capture`, {}, { 'PayPal-Request-Id': randomUUID() });

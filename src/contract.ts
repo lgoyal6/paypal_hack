@@ -86,8 +86,12 @@ export interface Payment {
   amount: Money;
 }
 
+/** Card details as a shopper typed them. Sandbox only; passed straight to PayPal, never stored. */
+export interface CardInput { number: string; expiry: string; security_code: string; name?: string }
+
 export interface PayPalClient {
-  cardPayment(amount: Money, description?: string): Promise<Payment>;
+  /** Card checkout with no buyer redirect. Without `card`, uses PayPal's sandbox test Visa. */
+  cardPayment(amount: Money, description?: string, card?: CardInput): Promise<Payment>;
   refund(captureId: string, amount?: Money): Promise<{ refundId: string; status: string }>;
   chargeback(payment: Payment, reasonCode?: string): Promise<{ disputeId: string | null }>;
   getDispute(disputeId: string): Promise<Record<string, unknown>>;

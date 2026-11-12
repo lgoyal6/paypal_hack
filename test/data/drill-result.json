@@ -1,0 +1,500 @@
+{
+  "forwardTo": "http://127.0.0.1:3999/hook",
+  "startedAt": "2026-11-12T09:28:19.347Z",
+  "finishedAt": "2026-11-12T09:30:18.610Z",
+  "scenarios": [
+    {
+      "scenario": "payment",
+      "expects": [
+        "PAYMENT.CAPTURE.COMPLETED"
+      ],
+      "delivered": {
+        "PAYMENT.CAPTURE.COMPLETED": {
+          "source": "live",
+          "eventId": "WH-48D40875C82851738-60437940T3235182A"
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "refund",
+      "expects": [
+        "PAYMENT.CAPTURE.COMPLETED",
+        "PAYMENT.CAPTURE.REFUNDED"
+      ],
+      "delivered": {
+        "PAYMENT.CAPTURE.COMPLETED": {
+          "source": "live",
+          "eventId": "WH-9E486053J2863203E-0BU94908RF8224110"
+        },
+        "PAYMENT.CAPTURE.REFUNDED": {
+          "source": "live",
+          "eventId": "WH-8YF414312A7764612-8L364229BH678222C"
+        }
+      },
+      "error": null
+    }
+  ],
+  "deliveries": [
+    {
+      "event": {
+        "id": "WH-48D40875C82851738-60437940T3235182A",
+        "event_version": "1.0",
+        "create_time": "2026-11-12T09:29:11.756Z",
+        "resource_type": "capture",
+        "resource_version": "2.0",
+        "event_type": "PAYMENT.CAPTURE.COMPLETED",
+        "summary": "Payment completed for $ 12.0 USD",
+        "resource": {
+          "id": "4PN22810E5290391E",
+          "amount": {
+            "currency_code": "USD",
+            "value": "12.00"
+          },
+          "final_capture": true,
+          "seller_protection": {
+            "status": "NOT_ELIGIBLE"
+          },
+          "seller_receivable_breakdown": {
+            "gross_amount": {
+              "currency_code": "USD",
+              "value": "12.00"
+            },
+            "paypal_fee": {
+              "currency_code": "USD",
+              "value": "0.80"
+            },
+            "net_amount": {
+              "currency_code": "USD",
+              "value": "11.20"
+            }
+          },
+          "status": "COMPLETED",
+          "processor_response": {
+            "avs_code": "A",
+            "cvv_code": "M",
+            "response_code": "0000"
+          },
+          "supplementary_data": {
+            "related_ids": {
+              "order_id": "79U62259CB8962743"
+            }
+          },
+          "payee": {
+            "email_address": "sb-merchant@business.example.com",
+            "merchant_id": "JQ7EXX22H2NR4"
+          },
+          "create_time": "2026-11-12T09:28:33Z",
+          "update_time": "2026-11-12T09:28:33Z",
+          "links": [
+            {
+              "href": "https://api.sandbox.paypal.com/v2/payments/captures/4PN22810E5290391E",
+              "rel": "self",
+              "method": "GET"
+            },
+            {
+              "href": "https://api.sandbox.paypal.com/v2/payments/captures/4PN22810E5290391E/refund",
+              "rel": "refund",
+              "method": "POST"
+            },
+            {
+              "href": "https://api.sandbox.paypal.com/v2/checkout/orders/79U62259CB8962743",
+              "rel": "up",
+              "method": "GET"
+            }
+          ],
+          "network_transaction_reference": {
+            "id": "039939629458150",
+            "network": "VISA"
+          }
+        },
+        "links": [
+          {
+            "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-48D40875C82851738-60437940T3235182A",
+            "rel": "self",
+            "method": "GET"
+          },
+          {
+            "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-48D40875C82851738-60437940T3235182A/resend",
+            "rel": "resend",
+            "method": "POST"
+          }
+        ]
+      },
+      "headers": {
+        "host": "assigned-exist-prediction-retain.trycloudflare.com",
+        "user-agent": "PayPal/AUHR-1.0-1",
+        "content-length": "1651",
+        "accept": "*/*",
+        "accept-encoding": "gzip",
+        "cdn-loop": "cloudflare; loops=1; subreqs=1",
+        "cf-connecting-ip": "173.0.80.116",
+        "cf-ew-via": "15",
+        "cf-ipcountry": "US",
+        "cf-ray": "a59483db39127284-LAX",
+        "cf-visitor": "{\"scheme\":\"https\"}",
+        "cf-warp-tag-id": "39ff6f4c-ac83-4610-b9da-d2eff899162f",
+        "cf-worker": "trycloudflare.com",
+        "connection": "keep-alive",
+        "content-type": "application/json",
+        "correlation-id": "f78829482e3e6",
+        "paypal-auth-algo": "SHA256withRSA",
+        "paypal-auth-version": "v2",
+        "paypal-cert-url": "https://api.sandbox.paypal.com/v1/notifications/certs/CERT-360caa42-fca2a594-9eaebfdf",
+        "paypal-transmission-id": "8c351ae0-de7b-11f1-8c07-bf5e919d2799",
+        "paypal-transmission-sig": "W6xvuJp4iNL4sROJSQh/uUdjVIRYv9s47yAhlw32svICO+DUrFiKx7Eu7IKgGWS7fAiMy7ocTHbqDgwF7OzjT2MDET5fDzUc+1atAF0EZ7dWXuYg5OAOpbL8fYNCSLM9xHw5ETnqcqIVpPdHzkoY1W3/ejyq9n8sXU5pGlocJ1v4/uAzjtyXbzEncUnfV2C7iCSefHOM8yt/z0W1IR4iFDxScl33D0LdVa2maoiS0krs35koKCjcIOr06iIBaqpN1G3jjH8q+QFlmaZWPqj5n/2tVb9fNw7PZoHad8TRvWC/P2z1auNF4mE7ZxP3rOWhTIJPhUxOtVDp+sL9UoDsAA==",
+        "paypal-transmission-time": "2026-11-12T09:29:23Z",
+        "x-forwarded-for": "173.0.80.116",
+        "x-forwarded-proto": "https"
+      },
+      "source": "live",
+      "signature": "verified",
+      "response": {
+        "status": 200,
+        "ms": 12,
+        "body": ""
+      },
+      "receivedAt": "2026-11-12T09:29:56.810Z"
+    },
+    {
+      "event": {
+        "id": "WH-8YF414312A7764612-8L364229BH678222C",
+        "event_version": "1.0",
+        "create_time": "2026-11-12T09:30:07.086Z",
+        "resource_type": "refund",
+        "resource_version": "2.0",
+        "event_type": "PAYMENT.CAPTURE.REFUNDED",
+        "summary": "A $ 15.0 USD capture payment was refunded",
+        "resource": {
+          "id": "3GJ16253444487800",
+          "amount": {
+            "currency_code": "USD",
+            "value": "15.00"
+          },
+          "seller_payable_breakdown": {
+            "gross_amount": {
+              "currency_code": "USD",
+              "value": "15.00"
+            },
+            "paypal_fee": {
+              "currency_code": "USD",
+              "value": "0.00"
+            },
+            "net_amount": {
+              "currency_code": "USD",
+              "value": "15.00"
+            },
+            "total_refunded_amount": {
+              "currency_code": "USD",
+              "value": "15.00"
+            }
+          },
+          "status": "COMPLETED",
+          "create_time": "2026-11-12T01:30:01-08:00",
+          "update_time": "2026-11-12T01:30:01-08:00",
+          "payer": {
+            "email_address": "sb-merchant@business.example.com",
+            "merchant_id": "JQ7EXX22H2NR4"
+          },
+          "links": [
+            {
+              "href": "https://api.sandbox.paypal.com/v2/payments/refunds/3GJ16253444487800",
+              "rel": "self",
+              "method": "GET"
+            },
+            {
+              "href": "https://api.sandbox.paypal.com/v2/payments/captures/2JP96780HT749725U",
+              "rel": "up",
+              "method": "GET"
+            }
+          ]
+        },
+        "links": [
+          {
+            "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-8YF414312A7764612-8L364229BH678222C",
+            "rel": "self",
+            "method": "GET"
+          },
+          {
+            "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-8YF414312A7764612-8L364229BH678222C/resend",
+            "rel": "resend",
+            "method": "POST"
+          }
+        ]
+      },
+      "headers": {
+        "host": "assigned-exist-prediction-retain.trycloudflare.com",
+        "user-agent": "PayPal/AUHD-1.0-1",
+        "content-length": "1324",
+        "accept": "*/*",
+        "accept-encoding": "gzip",
+        "cdn-loop": "cloudflare; loops=1; subreqs=1",
+        "cf-connecting-ip": "173.0.80.116",
+        "cf-ew-via": "15",
+        "cf-ipcountry": "US",
+        "cf-ray": "a594845b4d08bdda-LAX",
+        "cf-visitor": "{\"scheme\":\"https\"}",
+        "cf-warp-tag-id": "39ff6f4c-ac83-4610-b9da-d2eff899162f",
+        "cf-worker": "trycloudflare.com",
+        "connection": "keep-alive",
+        "content-type": "application/json",
+        "correlation-id": "f879666eb940f",
+        "paypal-auth-algo": "SHA256withRSA",
+        "paypal-auth-version": "v2",
+        "paypal-cert-url": "https://api.sandbox.paypal.com/v1/notifications/certs/CERT-360caa42-fca2a594-9eaebfdf",
+        "paypal-transmission-id": "a9b79394-de7b-11f1-bd63-7dd3a574754d",
+        "paypal-transmission-sig": "V4sVKLJFGnZWG5KjyHdyM18RmYZAotGkA6izlKwCBYRZXlwWLQ/m4gjlYwZnqo0KQLU2gEaOacz9uun0581IDoyywVgS8SIVy6d/JdcEZNtqUFk0w2iq4IdZ4W+148I9dp/mPGmsEzrwtnNAcRdOeX1BO+PTncueMh4Yo/u03i4S0lD3gJJd1RLSwDXzZfgGZrKUw37TFfMTOUPej16FrLYUOAWJWYODD5B6W655SeFkV09nQib9Ia63YKq0EnVtDRX773Wruvb7fMIa3b5YtuUslPkaWItcWIz3kLWlCNEe49PDYWO0MexcRbm40+oRZATpJLZkLqh/Gq7x2tx4KA==",
+        "paypal-transmission-time": "2026-11-12T09:30:13Z",
+        "x-forwarded-for": "173.0.80.116",
+        "x-forwarded-proto": "https"
+      },
+      "source": "live",
+      "signature": "verified",
+      "response": {
+        "status": 200,
+        "ms": 9,
+        "body": ""
+      },
+      "receivedAt": "2026-11-12T09:30:16.562Z"
+    },
+    {
+      "event": {
+        "id": "WH-9E486053J2863203E-0BU94908RF8224110",
+        "event_version": "1.0",
+        "create_time": "2026-11-12T09:30:03.605Z",
+        "resource_type": "capture",
+        "resource_version": "2.0",
+        "event_type": "PAYMENT.CAPTURE.COMPLETED",
+        "summary": "Payment completed for $ 15.0 USD",
+        "resource": {
+          "id": "2JP96780HT749725U",
+          "amount": {
+            "currency_code": "USD",
+            "value": "15.00"
+          },
+          "final_capture": true,
+          "seller_protection": {
+            "status": "NOT_ELIGIBLE"
+          },
+          "seller_receivable_breakdown": {
+            "gross_amount": {
+              "currency_code": "USD",
+              "value": "15.00"
+            },
+            "paypal_fee": {
+              "currency_code": "USD",
+              "value": "0.88"
+            },
+            "net_amount": {
+              "currency_code": "USD",
+              "value": "14.12"
+            }
+          },
+          "status": "REFUNDED",
+          "processor_response": {
+            "avs_code": "A",
+            "cvv_code": "M",
+            "response_code": "0000"
+          },
+          "supplementary_data": {
+            "related_ids": {
+              "order_id": "2V329865GR008713B"
+            }
+          },
+          "payee": {
+            "email_address": "sb-merchant@business.example.com",
+            "merchant_id": "JQ7EXX22H2NR4"
+          },
+          "create_time": "2026-11-12T09:29:58Z",
+          "update_time": "2026-11-12T09:30:01Z",
+          "links": [
+            {
+              "href": "https://api.sandbox.paypal.com/v2/payments/captures/2JP96780HT749725U",
+              "rel": "self",
+              "method": "GET"
+            },
+            {
+              "href": "https://api.sandbox.paypal.com/v2/payments/captures/2JP96780HT749725U/refund",
+              "rel": "refund",
+              "method": "POST"
+            },
+            {
+              "href": "https://api.sandbox.paypal.com/v2/checkout/orders/2V329865GR008713B",
+              "rel": "up",
+              "method": "GET"
+            }
+          ]
+        },
+        "links": [
+          {
+            "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-9E486053J2863203E-0BU94908RF8224110",
+            "rel": "self",
+            "method": "GET"
+          },
+          {
+            "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-9E486053J2863203E-0BU94908RF8224110/resend",
+            "rel": "resend",
+            "method": "POST"
+          }
+        ]
+      },
+      "headers": {
+        "host": "assigned-exist-prediction-retain.trycloudflare.com",
+        "user-agent": "PayPal/AUHD-1.0-1",
+        "content-length": "1576",
+        "accept": "*/*",
+        "accept-encoding": "gzip",
+        "cdn-loop": "cloudflare; loops=1; subreqs=1",
+        "cf-connecting-ip": "173.0.80.116",
+        "cf-ew-via": "15",
+        "cf-ipcountry": "US",
+        "cf-ray": "a59484604da6a609-LAX",
+        "cf-visitor": "{\"scheme\":\"https\"}",
+        "cf-warp-tag-id": "39ff6f4c-ac83-4610-b9da-d2eff899162f",
+        "cf-worker": "trycloudflare.com",
+        "connection": "keep-alive",
+        "content-type": "application/json",
+        "correlation-id": "f385676848063",
+        "paypal-auth-algo": "SHA256withRSA",
+        "paypal-auth-version": "v2",
+        "paypal-cert-url": "https://api.sandbox.paypal.com/v1/notifications/certs/CERT-360caa42-fca2a594-9eaebfdf",
+        "paypal-transmission-id": "a9cddaba-de7b-11f1-bd63-5d1759699496",
+        "paypal-transmission-sig": "JKXBTQzbIhoQ2lxTpilj04Aib41CuJBB5KkYyA2mXzZpuwVziqQVAZPbQGf6r92k6fd+sFbpAPgQO0ysmckQPoI8JM/nZwej/W2NeXpHL1yL49Om3pjCpoitIF2RCxuTRffRnLq0ILDNtM8O6+Q220xQD4bFFNtP2EoEf68+3NH4Tl8SPFCwYEu+FDpdryXelXelmXzi1gcicH4KXZZgWWTtfpIFyHBfD3Vlql1Ih4VdzMkjKaUJHpJFTf6a4tcvy6X0gAWJvCeItBuA7Nanu+EPJbEvR2STbZzHJSHJz1R6t6H0wGNIaTBP3DLGXkVygdAkkKmkyhEUVKh+vs9Adw==",
+        "paypal-transmission-time": "2026-11-12T09:30:13Z",
+        "x-forwarded-for": "173.0.80.116",
+        "x-forwarded-proto": "https"
+      },
+      "source": "live",
+      "signature": "verified",
+      "response": {
+        "status": 200,
+        "ms": 3,
+        "body": ""
+      },
+      "receivedAt": "2026-11-12T09:30:17.464Z"
+    }
+  ],
+  "checks": [
+    {
+      "check": "real-event",
+      "eventType": "PAYMENT.CAPTURE.COMPLETED",
+      "pass": true,
+      "response": {
+        "status": 200,
+        "ms": 3,
+        "body": ""
+      }
+    },
+    {
+      "check": "real-event",
+      "eventType": "PAYMENT.CAPTURE.REFUNDED",
+      "pass": true,
+      "response": {
+        "status": 200,
+        "ms": 9,
+        "body": ""
+      }
+    },
+    {
+      "check": "real-event",
+      "eventType": "PAYMENT.CAPTURE.COMPLETED",
+      "pass": true,
+      "response": {
+        "status": 200,
+        "ms": 12,
+        "body": ""
+      }
+    },
+    {
+      "check": "duplicate",
+      "eventType": "PAYMENT.CAPTURE.COMPLETED",
+      "pass": true,
+      "response": {
+        "status": 200,
+        "ms": 2,
+        "body": ""
+      },
+      "note": "Status only. A handler that answers 200 but acts twice still passes here; the AI review checks for dedupe on event.id."
+    },
+    {
+      "check": "duplicate",
+      "eventType": "PAYMENT.CAPTURE.REFUNDED",
+      "pass": true,
+      "response": {
+        "status": 200,
+        "ms": 3,
+        "body": ""
+      },
+      "note": "Status only. A handler that answers 200 but acts twice still passes here; the AI review checks for dedupe on event.id."
+    },
+    {
+      "check": "duplicate",
+      "eventType": "PAYMENT.CAPTURE.COMPLETED",
+      "pass": true,
+      "response": {
+        "status": 200,
+        "ms": 2,
+        "body": ""
+      },
+      "note": "Status only. A handler that answers 200 but acts twice still passes here; the AI review checks for dedupe on event.id."
+    },
+    {
+      "check": "out-of-order",
+      "eventType": "PAYMENT.CAPTURE.COMPLETED",
+      "pass": true,
+      "response": {
+        "status": 200,
+        "ms": 1,
+        "body": ""
+      }
+    },
+    {
+      "check": "out-of-order",
+      "eventType": "PAYMENT.CAPTURE.REFUNDED",
+      "pass": true,
+      "response": {
+        "status": 200,
+        "ms": 2,
+        "body": ""
+      }
+    },
+    {
+      "check": "out-of-order",
+      "eventType": "PAYMENT.CAPTURE.COMPLETED",
+      "pass": true,
+      "response": {
+        "status": 200,
+        "ms": 3,
+        "body": ""
+      }
+    },
+    {
+      "check": "forged-unsigned",
+      "eventType": "PAYMENT.CAPTURE.COMPLETED",
+      "pass": false,
+      "response": {
+        "status": 200,
+        "ms": 1,
+        "body": ""
+      },
+      "note": "Tampered amount, no PayPal signature. 2xx means the app accepted a forged payment."
+    },
+    {
+      "check": "unknown-type",
+      "eventType": "PAYDRILL.UNKNOWN.EVENT",
+      "pass": true,
+      "response": {
+        "status": 200,
+        "ms": 1,
+        "body": ""
+      },
+      "note": "Non-2xx makes PayPal retry an event the app will never handle."
+    }
+  ],
+  "delivery": {
+    "expected": 3,
+    "live": 3,
+    "backfilled": 0,
+    "missing": 0
+  }
+}

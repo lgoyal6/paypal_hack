@@ -5,6 +5,17 @@ import type { CheckResult, DrillEvent, PayPalEvent } from '../contract.js';
 
 const ok = (s: number) => s >= 200 && s < 300;
 
+/** Tampered copy of a real event: new id, amount set to 9999.00, meant to be sent without PayPal signature headers. */
+export function forgeEvent(e: PayPalEvent): PayPalEvent {
+  const forged: PayPalEvent = structuredClone(e);
+  forged.id = `WH-FORGED-${Date.now()}`;
+  // Payments carry amount, disputes carry dispute_amount (see fixtures/README.md).
+  const res = forged.resource as { amount?: { value?: string }; dispute_amount?: { value?: string } };
+  if (res.amount) res.amount.value = '9999.00';
+  if (res.dispute_amount) res.dispute_amount.value = '9999.00';
+  return forged;
+}
+
 export async function runChaos(forwardTo: string, real: DrillEvent[], slowMs = 3_000): Promise<CheckResult[]> {
   const checks: CheckResult[] = [];
 
@@ -26,12 +37,7 @@ export async function runChaos(forwardTo: string, real: DrillEvent[], slowMs = 3
     return r.amount || r.dispute_amount;
   }) ?? real[0];
   if (money) {
-    const forged: PayPalEvent = structuredClone(money.event);
-    forged.id = `WH-FORGED-${Date.now()}`;
-    // Payments carry amount, disputes carry dispute_amount (see fixtures/README.md).
-    const res = forged.resource as { amount?: { value?: string }; dispute_amount?: { value?: string } };
-    if (res.amount) res.amount.value = '9999.00';
-    if (res.dispute_amount) res.dispute_amount.value = '9999.00';
+    const forged = forgeEvent(money.event);
     // No paypal-* signature headers: a handler that verifies signatures must reject this.
     const r = await forward(forwardTo, forged, {}, 'chaos-forged', 'unsigned');
     checks.push({

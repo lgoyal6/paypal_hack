@@ -12,6 +12,22 @@ async function main(): Promise<void> {
   loadEnv();
   await import('./commands.js');
   const [name, ...args] = process.argv.slice(2);
+  if (!name && process.stdout.isTTY) {
+    // Bare "paydrill": a menu instead of a wall of help.
+    const p = await import('@clack/prompts');
+    const pick = await p.select({
+      message: 'paydrill',
+      options: [
+        { value: 'init', label: 'Setup', hint: 'keys, route, paydrill.yml' },
+        { value: 'drill', label: 'Drill my handler' },
+        { value: 'listen', label: 'Listen for events' },
+        { value: 'scenarios', label: 'List trigger scenarios' },
+        { value: 'help', label: 'All commands' },
+      ],
+    });
+    if (p.isCancel(pick) || pick === 'help') return help();
+    return commands[String(pick)].run([]);
+  }
   const cmd = name ? commands[name] : undefined;
   if (!cmd) return help();
   await cmd.run(args);
