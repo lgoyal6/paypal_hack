@@ -19,3 +19,11 @@ Record only real runs: real sandbox events, real Claude output. Say on screen th
 - [ ] Every AI command has been run once with a real API key (see Known gaps in the README).
 - [ ] `examples/demo-shop` reset: `git checkout examples/demo-shop` so the planted bugs are back.
 - [ ] No keys visible in the terminal or `.env` on screen.
+
+## Title cards with OpenMotion
+
+The video's opening and closing cards can be made in [OpenMotion](https://openmotion.design/how-to-use) (it drives Claude Code). Its guide asks for story, timing, look and finish in one prompt:
+
+> Create a 2-scene, 16:9 title sequence for a developer tool called paydrill, 8 seconds total. Scene 1 (4s): on a white background with a faint violet glow at the top, a black terminal card slides up and types `paydrill drill`; five check rows appear and turn red one by one. Scene 2 (4s): the rows flip to green in a quick cascade, the card shrinks to the left, and the line "Stripe's CLI helps you build on Stripe. paydrill helps you build on PayPal." types in beside it in heavy, tightly tracked black type. Violet accent #6848e8, system sans-serif, calm ease-out motion. End on the paydrill wordmark.
+
+Export as video for the demo, or as HTML for the README.
