@@ -3,9 +3,13 @@ import fs from 'node:fs';
 import readline from 'node:readline/promises';
 import { register } from '../registry.ts';
 import { paypal } from '../paypal/client.ts';
-import type { DrillResult, ParityResult } from '../contract.ts';
+import type { CheckResult, DrillResult, ParityResult } from '../contract.ts';
+import { stringify } from 'yaml';
 import { readCodeFiles } from './llm.ts';
-import { verdict } from './verdict.ts';
+import { decide, verdict } from './verdict.ts';
+import { heal } from './heal.ts';
+import { rerunDrill } from './rerun.ts';
+import { newScenario, saveScenario } from './scenario.ts';
 import { fix } from './fix.ts';
 import { applyOnBranch } from './branch.ts';
 import { doctor } from './doctor.ts';
@@ -48,8 +52,27 @@ register('explain', {
   },
 });
 
+/** Rerun options shared by fix --rerun and heal: how to start the patched app, and where it listens. */
+function rerunOptions(args: string[], r: DrillResult) {
+  const start = flag(args, 'start');
+  if (!start) return null;
+  const forwardTo = flag(args, 'rerun-url') ?? r.forwardTo;
+  const scenarios = r.scenarios.map((s) => s.scenario);
+  return (cwd: string) => rerunDrill({ cwd, start, forwardTo, scenarios: scenarios.length ? scenarios : ['payment', 'refund'], log: console.log });
+}
+
+function printRedGreen(before: DrillResult, after: DrillResult) {
+  const key = (c: CheckResult) => `${c.check}:${c.eventType}`;
+  console.log('\nBefore -> after');
+  for (const k of [...new Set([...before.checks, ...after.checks].map(key))]) {
+    const b = before.checks.find((c) => key(c) === k), a = after.checks.find((c) => key(c) === k);
+    const show = (c?: CheckResult) => (!c ? 'not run' : c.pass ? 'pass' : `FAIL ${c.response.status}`);
+    console.log(`  ${k.padEnd(48)} ${show(b).padEnd(9)} -> ${show(a)}`);
+  }
+}
+
 register('fix', {
-  describe: 'Write a fix for a failed drill on a new branch: paydrill fix --drill result.json [dir]',
+  describe: 'Fix a failed drill on a new branch, optionally prove it: paydrill fix --drill result.json [dir] [--start "npm start"] [--rerun-url url]',
   async run(args) {
     const r = json<DrillResult>(flag(args, 'drill'));
     if (!r) throw new Error('--drill <result.json> is required (from paydrill drill --out)');
@@ -61,7 +84,47 @@ register('fix', {
     if (!patch.diff) return console.log('\nClaude proposed no change.');
     const out = applyOnBranch(dir, patch, `paydrill/fix-${Date.now().toString(36)}`, `Fix webhook handler (paydrill)\n\n${v.summary}`);
     console.log(`\n${patch.diff}\nFix committed on branch ${out.branch} (your working tree is untouched).`);
-    console.log(`Prove it: start your app from ${out.worktree}, then run paydrill drill again.`);
+    const rerun = rerunOptions(args, r);
+    if (!rerun) return console.log(`Prove it: add --start "<command that starts your app>" to rerun the drill on the fix, or start it from ${out.worktree} and run paydrill drill again.`);
+    console.log(`\nRerunning the drill against the fix (${out.worktree})...`);
+    const after = await rerun(out.worktree);
+    printRedGreen(r, after);
+    const green = decide(after) === 'ship';
+    console.log(green ? '\nGreen: the fix passes every check.' : '\nStill failing: see the checks above.');
+    if (!green) process.exitCode = 1;
+  },
+});
+
+register('heal', {
+  describe: 'Self-healing PR: fix on a branch, rerun the drill there, open a PR only if green: paydrill heal --drill result.json --start "npm start" [dir] [--no-push]',
+  async run(args) {
+    const r = json<DrillResult>(flag(args, 'drill'));
+    if (!r) throw new Error('--drill <result.json> is required (from paydrill drill --out)');
+    const rerun = rerunOptions(args, r);
+    if (!rerun) throw new Error('--start "<command that starts your app>" is required: heal must rerun the drill before opening a PR');
+    const dir = positional(args) ?? '.';
+    const out = await heal({ projectDir: dir, files: readCodeFiles(dir), before: r, rerun, push: !has(args, 'no-push') });
+    if ('after' in out && out.after) printRedGreen(r, out.after);
+    const msg: Record<string, string> = {
+      'nothing-to-fix': 'The drill already passes; nothing to heal.',
+      'no-patch': 'Claude proposed no change.',
+      'still-failing': `The fix on ${'branch' in out ? out.branch : ''} still fails the drill, so no PR was opened.`,
+      'branch-ready': `Green. Fix is on branch ${'branch' in out ? out.branch : ''} (not pushed: --no-push).`,
+      'pr-opened': `Green. Opened ${'url' in out ? out.url : ''}. paydrill never merges; review it.`,
+    };
+    console.log(`\n${msg[out.status]}`);
+    if (out.status === 'still-failing') process.exitCode = 1;
+  },
+});
+
+register('new', {
+  describe: 'Claude writes a paydrill.yml scenario from plain English: paydrill new "subscription that fails payment twice"',
+  async run(args) {
+    const text = args.filter((a) => !a.startsWith('--')).join(' ');
+    if (!text) throw new Error('usage: paydrill new "<what the scenario should do>"');
+    const s = await newScenario(text);
+    console.log(stringify({ scenarios: { [s.name]: (({ name, ...rest }) => rest)(s) } }));
+    if (has(args, 'yes') || (await confirm(`Add "${s.name}" to paydrill.yml?`))) console.log(`saved to ${saveScenario(s)}; run it with paydrill trigger ${s.name}`);
   },
 });
 
