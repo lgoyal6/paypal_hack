@@ -6,3 +6,4 @@ import './scenarios/disputes.js';
 import './init/init.js';
 import './scenarios/rehearse.js';
 import './mcp/server.js';
+import './relay/record.js';
