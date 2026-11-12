@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Paydrill brings real PayPal sandbox events to localhost and turns webhook failures into reviewable fixes.">
+<title>Paydrill — The developer CLI for PayPal</title>
+<link rel="stylesheet" href="style.css">
+<script defer src="ag-grid.js"></script>
+<script defer src="demo.js"></script>
+</head>
+<body>
+<header class="nav"><a class="word" href="#">paydrill<span>.</span></a><nav aria-label="Main"><a href="#lab">Demo</a><a href="#features">Features</a><a class="nav-cta" href="https://github.com/lgoyal6/paypal_hack">GitHub ↗</a></nav></header>
+<main>
+<section class="hero wrap">
+<div class="hero-copy"><p class="eyebrow">A DEVELOPER CLI FOR PAYPAL</p><h1>From webhook<br>to working code.</h1><p>Bring real PayPal sandbox events to localhost. See what your handler did, find the line that broke, and review the fix.</p><div class="actions"><a class="button" href="#lab">Try the demo <span>↓</span></a><a href="#run">Run it locally ↗</a></div></div>
+<div class="hero-visual" aria-label="Animated paydrill terminal">
+<div class="terminal"><div class="bar"><i></i><i></i><i></i><span>Terminal</span></div><div class="screen"><div><span class="muted">$</span> <span id="typed"></span><span id="caret" class="caret"></span></div><div id="terminal-output" class="terminal-output"></div></div><button class="replay" id="type-replay" type="button">Replay ↻</button></div>
+<p class="caption">Animated playback from a recorded sandbox run.</p>
+</div>
+</section>
+<section class="proof" aria-label="Observed sandbox results"><div class="wrap proof-grid"><div><strong>$12</strong><span>Sandbox payment captured</span></div><div><strong>200</strong><span>Demo shop HTTP response</span></div><div><strong>24 ms</strong><span>Observed handler latency</span></div></div></section>
+<section id="lab" class="wrap lab">
+<p class="eyebrow">INTERACTIVE PRODUCT DEMO</p><h2>Follow the event.</h2><p class="lede">Select a recorded event to inspect the response. Switch to diagnosis, coverage, or migration to see what happens next.</p>
+<div class="tabs" role="group" aria-label="Demo view"><button data-tab="events" aria-pressed="true">Events</button><button data-tab="diagnosis" aria-pressed="false">Diagnosis</button><button data-tab="coverage" aria-pressed="false">Coverage</button><button data-tab="migration" aria-pressed="false">Migration</button></div>
+<div id="events" class="pane"><div class="grid-side"><label for="event-filter">Search the event log</label><input id="event-filter" type="search" placeholder="Event, source, or status"><div id="event-grid" aria-label="Recorded sandbox events"></div></div><aside id="detail" aria-live="polite"></aside></div>
+<div id="diagnosis" class="pane" hidden><div><h3>Five hundred. One field.</h3><p>A recorded dispute crashed the demo handler. Claude found the payload mismatch and drafted a patch on a separate Git branch.</p><p class="caption">Recorded-event replay. A fresh signed dispute rerun is still pending.</p></div><pre><code>server.js:197
+- resource.amount.value
++ resource.dispute_amount.value</code></pre></div>
+<div id="coverage" class="pane" hidden><div><h3>See what you tested.</h3><p>The demo shop contains three explicit event handlers. Paydrill can compare static coverage with deliveries from a saved drill, export JSON, and generate a badge.</p></div><pre><code>$ paydrill coverage examples/demo-shop
+handled    3 / 23 event types</code></pre></div>
+<div id="migration" class="pane" hidden><div><h3>Know what will move.</h3><p>Scan a Stripe codebase before changing it. The migration report distinguishes supported, partial, unsupported, and verified work.</p><p class="caption">Live cross-provider parity remains unverified.</p></div><pre><code>SUPPORTED   paymentIntents.create → PayPal Orders
+SUPPORTED   refunds.create → PayPal Refunds
+PARTIAL     metadata → custom_id / invoice_id
+UNSUPPORTED Stripe Tax → choose a tax provider</code></pre></div>
+</section>
+<section id="features" class="feature-section"><div class="wrap"><p class="eyebrow">THE TOOLKIT</p><h2>Every step, covered.</h2><div id="feature-list"></div></div></section>
+<section id="run" class="wrap run"><div><p class="eyebrow">RUN PAYDRILL</p><h2>Try it in your terminal.</h2><p>List the built-in scenarios with Node.js 22+. The repository walks through connecting a PayPal sandbox app and running the local demo shop.</p><a href="https://github.com/lgoyal6/paypal_hack#quick-start">Read the quick start ↗</a></div><div class="copy-box"><code>npx -y github:lgoyal6/paypal_hack scenarios</code><button id="copy" type="button">Copy</button></div></section>
+</main>
+<footer class="wrap bottom"><span class="word">paydrill.</span><span>Tijil Chhabra and Laksh Goyal · PayPal AI Hackathon</span><a href="https://github.com/lgoyal6/paypal_hack">MIT source ↗</a></footer>
+</body></html>

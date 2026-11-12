@@ -28,7 +28,7 @@ Every Claude call uses `claude-opus-5-5` (override with `PAYDRILL_MODEL`) with s
 
 ## Quick start
 
-Requires Node 22.6+ and git. The AI features need an Anthropic API key; the PayPal features need sandbox keys from the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/).
+Requires Node.js 22.6+ and Git. The PayPal commands need sandbox credentials from the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/). The AI commands can use a signed-in Claude Code install or an Anthropic API key.
 
 ```bash
 npm install
@@ -36,6 +36,27 @@ cp .env.example .env   # PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, ANTHROPIC_API_K
 npm run build
 npm test
 ```
+
+List the built-in scenarios with `node bin/paydrill.js scenarios`. For a live payment demo, set the two PayPal sandbox variables in `.env`, install `cloudflared` or configure your own HTTPS tunnel, and open three terminals in the repo:
+
+```bash
+# Terminal 1: start the intentionally buggy demo shop
+cd examples/demo-shop
+npm ci
+npm start
+```
+
+```bash
+# Terminal 2: start the relay and open the printed inspector URL
+node bin/paydrill.js listen --forward-to http://127.0.0.1:4242/webhooks/paypal --ui
+```
+
+```bash
+# Terminal 3: create a real sandbox capture
+node bin/paydrill.js trigger payment
+```
+
+The inspector shows the event source, signature status, and handler response. For a credential-free walkthrough, see [the interactive browser demo instructions](site/README.md).
 
 Then `node bin/paydrill.js` lists every command. The demo flow, against the demo shop running on port 4242:
 

@@ -1,0 +1,1 @@
+{"private":true,"scripts":{"build":"node build.mjs"},"dependencies":{"ag-grid-community":"36.3.0"}}
