@@ -70,7 +70,7 @@ Rules:
 | `init` wizard, framework and route detection | Laksh |
 | `paydrill.yml` scenario engine with assertions | Laksh |
 | Dispute rehearsal: sandbox side | Laksh |
-| `migrate` parity runs (Stripe test mode vs PayPal sandbox) | Laksh |
+| `migrate` parity runs (Stripe test mode vs PayPal sandbox) | Tijil (handed off, #42) |
 | MCP server | Laksh |
 | Dispute rehearsal: AI evidence drafting | Tijil |
 | `fix`: patch generation (Laksh's drill does the rerun) | Tijil |
@@ -83,7 +83,7 @@ Rules:
 
 | Task | Owner |
 |---|---|
-| GitHub Action with PR comment and coverage badge | Laksh |
+| GitHub Action with PR comment and coverage badge | Laksh built it; Tijil runs it on GitHub (#42) |
 | Web inspector | Laksh |
 | `record` / `replay` | Laksh |
 | Self-healing PRs | Tijil |
@@ -103,7 +103,7 @@ Rules:
 
 | Task | Owner |
 |---|---|
-| Record the demo video (needs real sandbox runs) | Laksh |
+| Record the demo video (needs real sandbox runs) | Tijil (handed off, #42) |
 | Demo script, README, Devpost, Known gaps | Tijil |
 | Final pass on the video | Both |
 
@@ -119,3 +119,7 @@ Once Tijil has his own sandbox app, he can run full drills himself and sync poin
 ## Status updates
 
 Post in the group chat when a branch merges or a kill check resolves. Failures go first, in plain words: what failed, the error, what is blocked by it.
+
+## Handoff (2026-11-12)
+
+Everything else in Laksh's lane is merged and verified on the real sandbox. What remains moved to Tijil in [#42](https://github.com/lgoyal6/paypal_hack/issues/42): `migrate` parity runs, running the GitHub Action on GitHub, the demo video, and filtering the rehearsal timeline to its own dispute.
