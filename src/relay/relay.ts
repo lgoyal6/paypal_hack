@@ -8,6 +8,7 @@ import path from 'node:path';
 import { EventEmitter } from 'node:events';
 import { paypal, call } from '../paypal/client.js';
 import { openTunnel, settle } from './tunnel.js';
+import { target } from './routes.js';
 import type { DrillEvent, EventSource, HandlerResponse, PayPalEvent, SignatureStatus } from '../contract.js';
 
 // Webhooks this machine's paydrill processes registered, with the owning pid, so a crashed run's webhook
@@ -49,7 +50,7 @@ export async function forward(
   for (const k of PASS_HEADERS) if (headers[k]) h[k] = headers[k];
   const t0 = Date.now();
   try {
-    const res = await fetch(forwardTo, { method: 'POST', headers: h, body: JSON.stringify(event) });
+    const res = await fetch(target(event.event_type, forwardTo), { method: 'POST', headers: h, body: JSON.stringify(event) });
     return { status: res.status, ms: Date.now() - t0, body: (await res.text()).slice(0, 300) };
   } catch (e) {
     const err = e as Error & { cause?: { code?: string } };

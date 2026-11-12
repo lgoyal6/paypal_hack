@@ -6,6 +6,7 @@ import { forgeEvent } from './chaos.js';
 import { ListenView } from '../ui/ListenView.js';
 import { loadConfig } from '../scenarios/yaml.js';
 import { startInspector } from '../ui/inspector.js';
+import { routes } from './routes.js';
 import type { DrillEvent } from '../contract.js';
 
 function flag(args: string[], name: string): string | undefined {
@@ -33,6 +34,7 @@ register('listen', {
 
     if (!interactive) {
       console.log(`Ready. Forwarding sandbox events to ${forwardTo}`);
+      for (const r of routes()) console.log(`  route ${r.pattern} -> ${r.to}`);
       console.log(`Webhook id (verify signatures in your app with this): ${relay.webhookId}`);
       console.log('Ctrl-C stops and removes the webhook.\n');
       relay.bus.on('delivery', (d: DrillEvent) => console.log(formatDelivery(d)));
