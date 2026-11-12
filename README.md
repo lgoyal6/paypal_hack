@@ -4,7 +4,7 @@ The Stripe CLI for PayPal. paydrill sends real PayPal sandbox events to the app 
 
 It also does what Stripe's CLI does not: it measures payment coverage, generates types from real events, rehearses a full dispute with AI-written evidence, tests whether AI shopping agents can buy from your store, and migrates a Stripe app to PayPal with an honest report of what was verified.
 
-Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). Plan: [PLAN.md](PLAN.md). Team split: [TEAM.md](TEAM.md). Lane interfaces: [CONTRACT.md](CONTRACT.md).
+Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). 
 
 ## Why
 
