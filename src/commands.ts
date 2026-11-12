@@ -10,6 +10,7 @@ import './relay/record.js';
 import './agent/store.js';
 import './ai/commands.js';
 import './relay/events.js';
+import './migrate/parity.js';
 import { loadPlugins } from './plugins.js';
 
 // After the built-ins, so a plugin cannot silently shadow one.
