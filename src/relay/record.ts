@@ -18,7 +18,7 @@ register('record', {
   async run(args) {
     const out = flag(args, 'out') ?? `paydrill-session-${Date.now()}.json`;
     const forwardTo = flag(args, 'forward-to') ?? loadConfig()?.forwardTo ?? 'http://127.0.0.1:9/discard';
-    const relay = await startRelay({ forwardTo, port: Number(flag(args, 'port') ?? 0) });
+    const relay = await startRelay({ forwardTo, port: Number(flag(args, 'port') ?? 0), publicUrl: flag(args, 'public-url') });
     const rec: Recording = { recordedAt: new Date().toISOString(), forwardTo, deliveries: [] };
     const save = () => fs.writeFileSync(out, JSON.stringify(rec, null, 2));
     relay.bus.on('delivery', (d: DrillEvent) => { rec.deliveries.push(d); save(); console.log(formatDelivery(d)); });

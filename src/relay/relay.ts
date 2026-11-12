@@ -74,6 +74,8 @@ export async function startRelay(opts: {
   port?: number;
   backfill?: boolean;
   backfillAfterMs?: number;
+  /** Your own public HTTPS URL that already forwards to `port` (ngrok, a reverse proxy, a VPS). Skips cloudflared. */
+  publicUrl?: string;
 }): Promise<Relay> {
   const { forwardTo, port = 0, backfill = true, backfillAfterMs = 20_000 } = opts; // 0 = any free port, so runs never collide
   const bus = new EventEmitter();
@@ -117,9 +119,12 @@ export async function startRelay(opts: {
   await new Promise<void>((r) => server.listen(port, '127.0.0.1', r));
   const boundPort = (server.address() as { port: number }).port;
 
-  const tunnel = await openTunnel(boundPort);
+  const publicUrl = opts.publicUrl ?? process.env.PAYDRILL_PUBLIC_URL;
+  if (publicUrl && !/^https:\/\//.test(publicUrl)) throw new Error('PayPal only delivers webhooks to https URLs; --public-url must start with https://');
+  if (publicUrl && !port) throw new Error('--public-url needs a fixed --port that your URL forwards to');
+  const tunnel = publicUrl ? { url: publicUrl, close() {} } : await openTunnel(boundPort);
   try {
-    await settle();
+    if (!publicUrl) await settle();
     // Only remove webhooks whose paydrill process is gone. Deleting every tunnel webhook killed
     // concurrent runs (a rehearsal lost its webhook when a record session started).
     await pruneDeadWebhooks();

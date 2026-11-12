@@ -21,7 +21,7 @@ register('listen', {
     if (!forwardTo) throw new Error('--forward-to is required (or run "paydrill init" to save it in paydrill.yml)');
     const relay = await startRelay({
       forwardTo,
-      port: Number(flag(args, 'port') ?? 0),
+      port: Number(flag(args, 'port') ?? 0), publicUrl: flag(args, 'public-url'),
       backfill: !args.includes('--no-backfill'),
     });
     const stop = async () => { await relay.close(); };
