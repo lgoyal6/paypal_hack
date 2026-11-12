@@ -1,6 +1,7 @@
 // The drill: real sandbox scenarios, then chaos redelivery, then a verdict.
 // The AI verdict is Tijil's lane (src/ai). Until it lands, the verdict is the deterministic pass/fail.
 import fs from 'node:fs';
+import { EventEmitter } from 'node:events';
 import { register } from './registry.js';
 import { startRelay, formatDelivery } from './relay/relay.js';
 import { runChaos } from './relay/chaos.js';
@@ -33,14 +34,17 @@ function waitFor(seen: Map<string, DrillEvent>, before: Set<string>, types: stri
 export async function drill(opts: {
   forwardTo: string; scenarios: string[]; timeoutMs: number; simulateAfterMs?: number; log: (l: string) => void;
   registry?: Record<string, Scenario>;
+  /** Optional progress stream for UIs: 'scenario' (name, expects), 'delivery' (DrillEvent), 'scenario-done' (ScenarioResult), 'chaos', 'check' (CheckResult). */
+  bus?: EventEmitter;
 }): Promise<DrillResult> {
   const SCENARIOS = opts.registry ?? await allScenarios();
   const { forwardTo, scenarios, timeoutMs, simulateAfterMs = 45 * 60_000, log } = opts;
+  const bus = opts.bus ?? new EventEmitter();
   const startedAt = new Date().toISOString();
   log(`Opening a tunnel and registering a sandbox webhook -> ${forwardTo}`);
   const relay = await startRelay({ forwardTo });
   const deliveries: DrillEvent[] = [];
-  relay.bus.on('delivery', (d: DrillEvent) => { deliveries.push(d); log(`  ${formatDelivery(d)}`); });
+  relay.bus.on('delivery', (d: DrillEvent) => { deliveries.push(d); bus.emit('delivery', d); log(`  ${formatDelivery(d)}`); });
   relay.bus.on('warn', (w: string) => log(`  warn: ${w}`));
 
   const results: ScenarioResult[] = [];
@@ -49,6 +53,7 @@ export async function drill(opts: {
     for (const name of scenarios) {
       const s = SCENARIOS[name];
       log(`\n${name}: ${s.describe}`);
+      bus.emit('scenario', name, s.expects);
       const before = new Set(relay.seen.keys());
       const entry: ScenarioResult = { scenario: name, expects: s.expects, delivered: {}, error: null, simulated: [] };
       try {
@@ -66,12 +71,15 @@ export async function drill(opts: {
         log(`  FAILED: ${entry.error}`);
       }
       results.push(entry);
+      bus.emit('scenario-done', entry);
     }
     relay.bus.removeAllListeners('delivery');
     const real = [...relay.seen.values()];
     log('\nChaos: redelivering real events the way production PayPal can');
+    bus.emit('chaos');
     checks = await runChaos(forwardTo, real);
     for (const c of checks) {
+      bus.emit('check', c);
       log(`  ${c.pass ? 'pass' : 'FAIL'}  ${c.check.padEnd(16)} ${c.eventType} -> ${c.response.status} in ${c.response.ms}ms`);
     }
   } finally {
@@ -96,7 +104,7 @@ export async function drill(opts: {
 }
 
 register('drill', {
-  describe: 'Real sandbox events plus chaos against your handler: paydrill drill --forward-to <url> [--project dir] [--out result.json]',
+  describe: 'Real sandbox events plus chaos against your handler: paydrill drill --forward-to <url> [--ui] [--output compact|json|quiet] [--project dir] [--out result.json]',
   async run(args) {
     const cfg = loadConfig();
     const forwardTo = flag(args, 'forward-to') ?? cfg?.forwardTo;
@@ -104,14 +112,33 @@ register('drill', {
     const registry = await allScenarios();
     const names = (flag(args, 'scenarios') ?? 'payment,refund').split(',');
     for (const n of names) if (!registry[n]) throw new Error(`Unknown scenario "${n}". Try: ${Object.keys(registry).join(', ')}`);
+    // Output modes: interactive (default in a terminal), compact (log lines), json (result on stdout, for CI and agents), quiet (verdict only).
+    const mode = flag(args, 'output') ?? (args.includes('--ui') && process.stdout.isTTY ? 'interactive' : 'compact');
+    if (!['interactive', 'compact', 'json', 'quiet'].includes(mode)) throw new Error('--output must be interactive, compact, json or quiet');
+    const bus = new EventEmitter();
+    let ui: { unmount(): void } | null = null;
+    if (mode === 'interactive') {
+      const [{ render }, React, { DrillView }] = await Promise.all([import('ink'), import('react'), import('./ui/DrillView.js')]);
+      ui = render(React.createElement(DrillView, { bus, forwardTo }));
+    }
     const result = await drill({
-      forwardTo, scenarios: names, log: console.log, registry,
+      forwardTo, scenarios: names, registry, bus,
+      log: mode === 'compact' ? console.log : () => {},
       timeoutMs: Number(flag(args, 'timeout') ?? 120) * 1000,
       simulateAfterMs: Number(flag(args, 'simulate-after') ?? 2700) * 1000,
     });
+    ui?.unmount();
 
     const failed = result.checks.filter((c) => !c.pass);
     const failedScenarios = result.scenarios.filter((s) => s.error);
+    const badRun = failed.length || failedScenarios.length || result.delivery.missing;
+    if (mode === 'json' || mode === 'quiet') {
+      console.log(mode === 'json' ? JSON.stringify(result, null, 2) : badRun ? 'FIX FIRST' : 'SHIP');
+      const o = flag(args, 'out');
+      if (o) fs.writeFileSync(o, JSON.stringify(result, null, 2));
+      if (badRun) process.exitCode = 1;
+      return;
+    }
     console.log('\nReport');
     for (const s of failedScenarios) console.log(`  FAIL  scenario ${s.scenario}: ${s.error}`);
     for (const s of result.scenarios) {
