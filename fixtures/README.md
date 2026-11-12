@@ -1,7 +1,7 @@
 # Fixtures
 
 Real PayPal sandbox webhook events, recorded by `paydrill listen` on 2026-11-12. One `PayPalEvent` per file, unmodified except:
-- `_source: "sandbox"` added at the top level (see CONTRACT.md#fixtures)
+- `_source: "sandbox"` added at the top level
 - the sandbox merchant email replaced with `sb-merchant@business.example.com`
 
 | File | Produced by |

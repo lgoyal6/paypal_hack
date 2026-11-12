@@ -17,7 +17,7 @@ export function loadEnv(cwd = process.cwd()): void {
 export function requireEnv(...keys: string[]): Record<string, string> {
   const missing = keys.filter((k) => !process.env[k]);
   if (missing.length) {
-    throw new Error(`Missing ${missing.join(', ')}. Put them in .env or export them. See CONTRACT.md#environment.`);
+    throw new Error(`Missing ${missing.join(', ')}. Put them in .env or export them. See .env.example for the expected variables.`);
   }
   return Object.fromEntries(keys.map((k) => [k, process.env[k] as string]));
 }

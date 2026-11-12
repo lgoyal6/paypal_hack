@@ -1,5 +1,5 @@
 // Redeliver real events the way production PayPal can: twice, out of order, forged, and unknown.
-// Pass/fail here is decided only by the app's HTTP answers (CONTRACT.md rule 3).
+// Pass/fail here is decided only by the app's HTTP answers.
 import { forward } from './relay.js';
 import type { CheckResult, DrillEvent, PayPalEvent } from '../contract.js';
 
