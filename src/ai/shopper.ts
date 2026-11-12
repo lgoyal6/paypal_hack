@@ -3,7 +3,7 @@
 // Claude-driven browser run that tries the goal and reports where it got stuck.
 import Anthropic from '@anthropic-ai/sdk';
 import { chromium, type Page } from 'playwright-core';
-import { MODEL } from './llm.ts';
+import { MODEL, useApi } from './llm.ts';
 
 export interface Blocker { id: string; severity: 'high' | 'medium'; title: string; detail: string; fix: string; source: 'check' | 'agent' }
 
@@ -86,6 +86,11 @@ export async function readiness(storeUrl: string, goal: string, maxSteps = 25): 
   const blockers = checkPages(store, checkout);
   const steps: string[] = [];
   let reached = 'stuck', summary = 'Agent did not finish.';
+  // The browser agent needs the API's tool loop; without a key, report the page checks alone and say so.
+  if (!useApi()) {
+    return { store: storeUrl, goal, score: score(blockers, false), reached: 'not-run', blockers, steps,
+      summary: 'Page checks only: the shopping-agent run needs ANTHROPIC_API_KEY.' };
+  }
 
   const browser = await chromium.launch({ channel: process.env.PAYDRILL_CHROME_CHANNEL ?? 'chrome', headless: !process.env.PAYDRILL_HEADED });
   try {

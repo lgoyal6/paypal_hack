@@ -1,7 +1,8 @@
 // One structured Claude call. Every AI feature in paydrill goes through here.
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
-import type * as z from 'zod/v4';
+import * as z from 'zod/v4';
+import { execFile } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import type { CodeFile } from '../contract.ts';
@@ -12,6 +13,9 @@ let client: Anthropic | undefined;
 
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh';
 
+/** API key set: call the Claude API. Otherwise use the local Claude Code CLI on the user's Claude plan. */
+export const useApi = () => !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) && process.env.PAYDRILL_AI !== 'claude-code';
+
 /** Ask Claude for JSON matching `schema`. Throws on refusal or unparseable output. */
 export async function structured<T extends z.ZodType>(
   schema: T,
@@ -19,6 +23,7 @@ export async function structured<T extends z.ZodType>(
   user: string,
   effort: Effort = 'high',
 ): Promise<z.infer<T>> {
+  if (!useApi()) return viaClaudeCode(schema, system, user, effort);
   client ??= new Anthropic();
   // Streaming: large max_tokens on a plain request is refused by the SDK (10-minute rule).
   const msg = await client.beta.messages.stream({
@@ -38,6 +43,32 @@ export async function structured<T extends z.ZodType>(
   if (msg.stop_reason === 'max_tokens') throw new Error('Claude ran out of output tokens; try fewer files');
   if (msg.parsed_output == null) throw new Error('Claude returned output that did not match the schema');
   return msg.parsed_output as z.infer<T>;
+}
+
+/** Same call through `claude -p` (Claude Code, headless), with tools off. Validated with the same zod schema. */
+function viaClaudeCode<T extends z.ZodType>(schema: T, system: string, user: string, effort: Effort): Promise<z.infer<T>> {
+  const model = /opus/.test(MODEL) ? 'opus' : /sonnet/.test(MODEL) ? 'sonnet' : /haiku/.test(MODEL) ? 'haiku' : MODEL;
+  const { $schema, ...jsonSchema } = z.toJSONSchema(schema); // claude's validator rejects the 2020-12 $schema header
+  const args = ['-p', '--output-format', 'json', '--json-schema', JSON.stringify(jsonSchema),
+    '--system-prompt', system, '--model', model, '--effort', effort, '--tools', ''];
+  return new Promise((resolve, reject) => {
+    const child = execFile('claude', args, { maxBuffer: 64 * 1024 * 1024, timeout: 15 * 60_000 }, (err, stdout, stderr) => {
+      if (err && !stdout) {
+        const missing = (err as NodeJS.ErrnoException).code === 'ENOENT';
+        return reject(new Error(missing
+          ? 'No Anthropic key and no Claude Code CLI. Put ANTHROPIC_API_KEY in .env, or install Claude Code and sign in.'
+          : `claude -p failed: ${stderr.trim().split('\n')[0] || err.message}`));
+      }
+      try {
+        const out = JSON.parse(stdout);
+        if (out.is_error) return reject(new Error(`Claude Code: ${out.result ?? out.subtype}`));
+        resolve(schema.parse(out.structured_output));
+      } catch (e) {
+        reject(new Error(`Claude Code returned output that did not match the schema: ${(e as Error).message.slice(0, 200)}`));
+      }
+    });
+    child.stdin?.end(user); // the prompt goes in on stdin, so large code listings never hit argv limits
+  });
 }
 
 /** Files rendered with line numbers so Claude can cite "file:line" accurately. */
