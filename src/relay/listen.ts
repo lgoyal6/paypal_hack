@@ -4,6 +4,7 @@ import { register } from '../registry.js';
 import { startRelay, formatDelivery, forward } from './relay.js';
 import { forgeEvent } from './chaos.js';
 import { ListenView } from '../ui/ListenView.js';
+import { loadConfig } from '../scenarios/yaml.js';
 import type { DrillEvent } from '../contract.js';
 
 function flag(args: string[], name: string): string | undefined {
@@ -14,8 +15,8 @@ function flag(args: string[], name: string): string | undefined {
 register('listen', {
   describe: 'Forward real sandbox events to your app: paydrill listen --forward-to <url> [--output compact]',
   async run(args) {
-    const forwardTo = flag(args, 'forward-to');
-    if (!forwardTo) throw new Error('--forward-to is required, e.g. --forward-to http://localhost:3000/webhooks/paypal');
+    const forwardTo = flag(args, 'forward-to') ?? loadConfig()?.forwardTo;
+    if (!forwardTo) throw new Error('--forward-to is required (or run "paydrill init" to save it in paydrill.yml)');
     const relay = await startRelay({
       forwardTo,
       port: Number(flag(args, 'port') ?? 4807),
