@@ -169,7 +169,7 @@ The goal is a migration that is provably correct for what it claims, and loudly 
 | `stripe.webhooks.constructEvent` | `POST /v1/notifications/verify-webhook-signature` | Supported |
 | `payment_intent.succeeded`, `checkout.session.completed` | `PAYMENT.CAPTURE.COMPLETED` | Supported |
 | `charge.refunded` | `PAYMENT.CAPTURE.REFUNDED` | Supported |
-| `charge.dispute.created` / `charge.dispute.closed` | `CUSTOMER.DISPUTE.CREATED` / `CUSTOMER.DISPUTE.RESOLVED` | Supported |
+| `charge.dispute.created` / `charge.dispute.closed` | `CUSTOMER.DISPUTE.CREATED` or `UPDATED` / `CUSTOMER.DISPUTE.RESOLVED` | Supported. Parity for dispute closed is verified on a real resolved sandbox dispute from the dispute pool (see below), never on a simulated event. |
 | `Idempotency-Key` header | `PayPal-Request-Id` header | Supported |
 | Amounts in integer minor units (`1200`) | Decimal strings (`"12.00"`), zero-decimal currencies like JPY handled | Supported, deterministic conversion with tests |
 | `metadata` | `custom_id` / `invoice_id` (127 characters max) | Partial: flag anything that does not fit |
@@ -188,8 +188,9 @@ The goal is a migration that is provably correct for what it claims, and loudly 
    - Run the migrated app against real PayPal sandbox events (paydrill `trigger`).
    - Spy on the app's own business functions (for example `fulfillOrder`, `markRefunded`), and require the same calls with the same arguments in both runs, with amounts normalized.
    - Same business effect for the same scenario means parity. HTTP 200 alone does not count.
-6. **Never in place.** Work happens on a new git branch. The output is a diff plus `MIGRATION_REPORT.md`. Nothing is committed to the user's main branch.
-7. **Honest exit code.** Non-zero unless every item is Verified. `--allow-partial` downgrades this to a warning, still listing every gap.
+6. **Dispute parity on real resolutions only.** A real `CUSTOMER.DISPUTE.RESOLVED` takes 30+ minutes in sandbox, so the parity run uses `paydrill disputes prepare` started ahead of time. The parity harness seeds the migrated app's order store with the pooled dispute's capture id (`disputed_transactions[0].seller_transaction_id`), adjudicates it, and requires the same business call (for example `markDisputeLost(orderId, amount)`) as the Stripe run with `charge.dispute.closed`. A PayPal-simulated event never counts toward parity: an item whose only evidence is simulated stays "Migrated, unverified".
+7. **Never in place.** Work happens on a new git branch. The output is a diff plus `MIGRATION_REPORT.md`. Nothing is committed to the user's main branch.
+8. **Honest exit code.** Non-zero unless every item is Verified. `--allow-partial` downgrades this to a warning, still listing every gap.
 
 ### The migration report
 
