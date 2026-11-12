@@ -1,0 +1,9 @@
+{
+  "name": "paydrill",
+  "version": "0.1.0",
+  "description": "Drill your PayPal webhook handler with real sandbox events, then fix what breaks. Companion to PayPal's AI-Toolkit: theirs moves money, ours tests your code.",
+  "license": "MIT",
+  "author": {
+    "name": "paydrill team"
+  }
+}
