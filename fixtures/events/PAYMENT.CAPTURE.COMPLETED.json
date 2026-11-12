@@ -1,0 +1,73 @@
+{
+  "_source": "docs",
+  "id": "WH-58D329510W468432D-8HN650336L201105X",
+  "event_version": "1.0",
+  "create_time": "2026-11-12T18:00:00Z",
+  "resource_type": "capture",
+  "resource_version": "2.0",
+  "event_type": "PAYMENT.CAPTURE.COMPLETED",
+  "summary": "Payment completed for $ 49.99 USD",
+  "resource": {
+    "id": "2GG279541U471931P",
+    "status": "COMPLETED",
+    "amount": {
+      "currency_code": "USD",
+      "value": "49.99"
+    },
+    "final_capture": true,
+    "seller_protection": {
+      "status": "ELIGIBLE",
+      "dispute_categories": [
+        "ITEM_NOT_RECEIVED",
+        "UNAUTHORIZED_TRANSACTION"
+      ]
+    },
+    "seller_receivable_breakdown": {
+      "gross_amount": {
+        "currency_code": "USD",
+        "value": "49.99"
+      },
+      "paypal_fee": {
+        "currency_code": "USD",
+        "value": "2.24"
+      },
+      "net_amount": {
+        "currency_code": "USD",
+        "value": "47.75"
+      }
+    },
+    "invoice_id": "INV-1042",
+    "custom_id": "order_1042",
+    "supplementary_data": {
+      "related_ids": {
+        "order_id": "5O190127TN364715T"
+      }
+    },
+    "links": [
+      {
+        "href": "https://api-m.sandbox.paypal.com/v2/payments/captures/2GG279541U471931P",
+        "rel": "self",
+        "method": "GET"
+      },
+      {
+        "href": "https://api-m.sandbox.paypal.com/v2/payments/captures/2GG279541U471931P/refund",
+        "rel": "refund",
+        "method": "POST"
+      }
+    ],
+    "create_time": "2026-11-12T18:00:00Z",
+    "update_time": "2026-11-12T18:00:00Z"
+  },
+  "links": [
+    {
+      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-58D329510W468432D-8HN650336L201105X",
+      "rel": "self",
+      "method": "GET"
+    },
+    {
+      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-58D329510W468432D-8HN650336L201105X/resend",
+      "rel": "resend",
+      "method": "POST"
+    }
+  ]
+}
