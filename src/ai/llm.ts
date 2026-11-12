@@ -30,7 +30,10 @@ export async function structured<T extends z.ZodType>(
     // Server-side fallback if the model declines; routed by refusal category.
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
-  }).finalMessage();
+  }).finalMessage().catch((e: Error) => {
+    if (/authentication method/.test(e.message)) throw new Error('No Anthropic credentials. Put ANTHROPIC_API_KEY in .env (see .env.example).');
+    throw e;
+  });
   if (msg.stop_reason === 'refusal') throw new Error(`Claude declined: ${msg.stop_details?.explanation ?? 'no reason given'}`);
   if (msg.stop_reason === 'max_tokens') throw new Error('Claude ran out of output tokens; try fewer files');
   if (msg.parsed_output == null) throw new Error('Claude returned output that did not match the schema');

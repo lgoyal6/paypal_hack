@@ -33,33 +33,30 @@ Requires Node 22.6+ and git. The AI features need an Anthropic API key; the PayP
 ```bash
 npm install
 cp .env.example .env   # PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, ANTHROPIC_API_KEY
+npm run build
 npm test
 ```
 
-Until the main `paydrill` CLI lands (Laksh's lane), the AI-lane commands run through a small runner:
+Then `node bin/paydrill.js` lists every command. The demo flow, against the demo shop running on port 4242:
 
 ```bash
-node --experimental-strip-types src/cli-ai.ts inventory examples/stripe-shop
+node bin/paydrill.js drill --forward-to http://localhost:4242/webhooks/paypal --scenarios payment,refund --project examples/demo-shop --out result.json
 ```
 
 ```bash
-node --experimental-strip-types src/cli-ai.ts coverage examples/demo-shop
+node bin/paydrill.js fix --drill result.json examples/demo-shop
 ```
 
 ```bash
-node --experimental-strip-types src/cli-ai.ts types fixtures/events --out /tmp
+node bin/paydrill.js coverage examples/demo-shop --drill result.json
 ```
 
 ```bash
-node --experimental-strip-types src/cli-ai.ts migrate examples/stripe-shop --plan
+node bin/paydrill.js migrate examples/stripe-shop --plan
 ```
 
 ```bash
-node --experimental-strip-types src/cli-ai.ts doctor examples/demo-shop
-```
-
-```bash
-node --experimental-strip-types src/cli-ai.ts ready http://localhost:4242/
+node bin/paydrill.js ready http://localhost:4242/
 ```
 
 ## Demo apps
@@ -88,8 +85,8 @@ Install the Claude Code plugin from this repo with `/plugin marketplace add lgoy
 Failures and limits first. This section is kept current with every failure found.
 
 - **The AI features have not been run against the live Claude API yet.** No API key was available while building the AI lane. Requests reach the API (a fake key returns 401), and every deterministic part is tested, but no real verdict, fix, evidence draft, migration glue or shopper run has been produced. Run them with a key before recording the demo.
-- **The PayPal lane is not merged yet.** `drill`, `listen`, triggers, chargebacks and parity runs are Laksh's branches. The AI lane is tested against fixtures and the contract types only.
-- **Fixtures are docs-shaped, not recorded.** Files in `fixtures/events/` follow PayPal's documented payload shapes with made-up IDs (`"_source": "docs"`). Real sandbox recordings will replace them.
+- **The AI commands have not been run end to end with a live drill.** The PayPal lane and the AI lane are both on main and wired into one CLI, but `drill --project`, `explain` and `fix` have not yet run together against the sandbox with a real Claude key. Migrate parity runs (Stripe test mode against PayPal sandbox) are not built yet.
+- **Four fixtures are still docs-shaped.** Five event types are real sandbox recordings (`"_source": "sandbox"`); `PAYMENT.CAPTURE.DENIED`, `PENDING`, `REVERSED` and `CHECKOUT.ORDER.APPROVED` still follow PayPal's documented shapes with made-up IDs.
 - **Contract gaps to fix after merging.** `EvidencePacket` has no evidence type field, so the type is carried in the notes header. `DrillEvent` has no raw body, which forged-event replay needs. The developer's app verifies signatures against its own webhook ID, which must match the one paydrill creates. The verdict is computed from checks inside the current contract, not by the model.
 - **`migrate` covers JS and TS one-time payments, refunds, webhooks and idempotency.** Saved customers, metadata and subscriptions are flagged for a human. Connect, Issuing, Terminal, Treasury, Radar and Stripe Tax are refused with the reason. A migration is only called Verified when a parity drill shows the same business calls on Stripe and PayPal; without parity runs every item is "migrated, unverified" or worse.
 - **The agent-readiness run stops at PayPal approval.** Buyer approval happens in PayPal's own window, so the shopper reports `paypal-approval` rather than completing the purchase.
