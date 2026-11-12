@@ -3,6 +3,7 @@
 // reads code only.
 import type { CodeFile, Review, Risk, Verdict } from '../contract.ts';
 import { review } from './review.ts';
+import { findToolkitSkill } from './toolkit.ts';
 
 export interface DoctorItem extends Risk { proven: string | null } // the failing check that proves it
 
@@ -30,7 +31,9 @@ export function formatDoctor(items: DoctorItem[], rev: Review): string {
 }
 
 export async function doctor(files: CodeFile[], v: Verdict | null = null) {
-  const rev = await review(files);
+  const skill = findToolkitSkill();
+  const rev = await review(files, skill?.text);
   const items = crossCheck(rev, v);
-  return { review: rev, items, text: formatDoctor(items, rev) };
+  const source = skill ? `reviewed with PayPal AI-Toolkit guidance (${skill.path})` : 'PayPal AI-Toolkit not installed; reviewed with paydrill rules only';
+  return { review: rev, items, text: `${source}\n${formatDoctor(items, rev)}` };
 }

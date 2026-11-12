@@ -28,6 +28,8 @@ Report:
 - scenarios: which drill scenarios to run, most important first.
 Do not invent files or lines. If unsure about a risk, leave it out.`;
 
-export function review(files: CodeFile[]): Promise<Review> {
-  return structured(ReviewSchema, SYSTEM, renderFiles(files), 'high');
+/** `guidance`: extra rules to review against, e.g. PayPal's AI-Toolkit best-practices skill. */
+export function review(files: CodeFile[], guidance?: string): Promise<Review> {
+  const system = guidance ? `${SYSTEM}\n\nAlso check the code against PayPal's own best practices below; cite the rule in "why".\n<paypal_best_practices>\n${guidance}\n</paypal_best_practices>` : SYSTEM;
+  return structured(ReviewSchema, system, renderFiles(files), 'high');
 }

@@ -10,7 +10,7 @@ const fixture = (t: string): PayPalEvent => JSON.parse(fs.readFileSync(`fixtures
 const delivery = (event: PayPalEvent, status = 200, source: DrillEvent['source'] = 'live'): DrillEvent => ({
   event, headers: {}, source, signature: 'verified', response: { status, ms: 7, body: '' }, receivedAt: '2026-11-12T09:30:00.000Z',
 });
-const tick = () => new Promise((r) => setTimeout(r, 30));
+const tick = () => new Promise((r) => setTimeout(r, 100)); // 30ms flaked under parallel test load
 
 test('shows real events, detail pane, and acts on keys', async () => {
   let push: (d: DrillEvent) => void = () => {};

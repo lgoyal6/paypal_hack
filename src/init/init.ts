@@ -1,6 +1,7 @@
 // paydrill init: verify sandbox keys, detect the webhook route, write paydrill.yml. Bare "paydrill" opens a menu.
 import fs from 'node:fs';
 import path from 'node:path';
+import { keychainAvailable, keychainSet } from '../keychain.js';
 import { execFileSync } from 'node:child_process';
 import * as p from '@clack/prompts';
 import { stringify } from 'yaml';
@@ -57,8 +58,12 @@ export async function init(): Promise<void> {
       s.stop(err ? `PayPal rejected them: ${err}` : 'Sandbox keys work');
       if (!err) break;
     }
-    writeEnv(id, secret);
-    p.log.success('Saved to .env (readable only by you)');
+    let inKeychain = false;
+    if (keychainAvailable()) {
+      try { keychainSet('PAYPAL_CLIENT_ID', id); keychainSet('PAYPAL_CLIENT_SECRET', secret); inKeychain = true; } catch { /* fall back to .env */ }
+    }
+    if (inKeychain) p.log.success('Saved to your OS keychain (service "paydrill"); nothing written to disk');
+    else { writeEnv(id, secret); p.log.success('Saved to .env (readable only by you)'); }
   }
   if (fs.existsSync('.git') && !gitIgnores('.env')) {
     p.log.warn('.env is NOT gitignored here. Add ".env" to .gitignore before committing.');

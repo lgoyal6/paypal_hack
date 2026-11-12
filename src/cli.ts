@@ -1,4 +1,5 @@
 import { loadEnv } from './env.js';
+import { loadFromKeychain } from './keychain.js';
 import { commands } from './registry.js';
 
 function help(): void {
@@ -10,6 +11,7 @@ function help(): void {
 
 async function main(): Promise<void> {
   loadEnv();
+  loadFromKeychain(); // keys init saved to the OS keychain
   await import('./commands.js');
   const [name, ...args] = process.argv.slice(2);
   if (!name && process.stdout.isTTY) {
