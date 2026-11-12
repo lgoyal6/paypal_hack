@@ -28,8 +28,10 @@ function waitFor(seen: Map<string, DrillEvent>, before: Set<string>, types: stri
   });
 }
 
-export async function drill(opts: { forwardTo: string; scenarios: string[]; timeoutMs: number; log: (l: string) => void }): Promise<DrillResult> {
-  const { forwardTo, scenarios, timeoutMs, log } = opts;
+export async function drill(opts: {
+  forwardTo: string; scenarios: string[]; timeoutMs: number; simulateAfterMs?: number; log: (l: string) => void;
+}): Promise<DrillResult> {
+  const { forwardTo, scenarios, timeoutMs, simulateAfterMs = 180_000, log } = opts;
   const startedAt = new Date().toISOString();
   log(`Opening a tunnel and registering a sandbox webhook -> ${forwardTo}`);
   const relay = await startRelay({ forwardTo });
@@ -44,9 +46,10 @@ export async function drill(opts: { forwardTo: string; scenarios: string[]; time
       const s = SCENARIOS[name];
       log(`\n${name}: ${s.describe}`);
       const before = new Set(relay.seen.keys());
-      const entry: ScenarioResult = { scenario: name, expects: s.expects, delivered: {}, error: null };
+      const entry: ScenarioResult = { scenario: name, expects: s.expects, delivered: {}, error: null, simulated: [] };
       try {
-        await s.run((l) => log(`  ${l}`));
+        const out = await s.run((l) => log(`  ${l}`), { waitMs: simulateAfterMs, simulate: (t) => relay.simulate(t) });
+        entry.simulated = (out.simulated as string[] | undefined) ?? [];
         const got = await waitFor(relay.seen, before, s.expects, timeoutMs);
         for (const t of s.expects) {
           const d = got.get(t);
@@ -81,6 +84,7 @@ export async function drill(opts: { forwardTo: string; scenarios: string[]; time
       expected: delivered.length,
       live: delivered.filter((d) => d?.source === 'live').length,
       backfilled: delivered.filter((d) => d?.source === 'backfill').length,
+      simulated: delivered.filter((d) => d?.source === 'paypal-simulated').length,
       missing: delivered.filter((d) => !d).length,
     },
   };
@@ -93,15 +97,22 @@ register('drill', {
     if (!forwardTo) throw new Error('--forward-to is required');
     const names = (flag(args, 'scenarios') ?? 'payment,refund').split(',');
     for (const n of names) if (!SCENARIOS[n]) throw new Error(`Unknown scenario "${n}"`);
-    const result = await drill({ forwardTo, scenarios: names, timeoutMs: Number(flag(args, 'timeout') ?? 120) * 1000, log: console.log });
+    const result = await drill({
+      forwardTo, scenarios: names, log: console.log,
+      timeoutMs: Number(flag(args, 'timeout') ?? 120) * 1000,
+      simulateAfterMs: Number(flag(args, 'simulate-after') ?? 180) * 1000,
+    });
 
     const failed = result.checks.filter((c) => !c.pass);
     const failedScenarios = result.scenarios.filter((s) => s.error);
     console.log('\nReport');
     for (const s of failedScenarios) console.log(`  FAIL  scenario ${s.scenario}: ${s.error}`);
+    for (const s of result.scenarios) {
+      for (const t of s.simulated) console.log(`  SIMULATED  ${t} in ${s.scenario}: sent by PayPal's webhook simulator, not produced by real sandbox money movement`);
+    }
     for (const c of failed) console.log(`  FAIL  ${c.check} ${c.eventType}: ${c.response.status}${c.note ? `  (${c.note})` : ''}`);
     const d = result.delivery;
-    console.log(`  PayPal delivery: ${d.live} live, ${d.backfilled} rescued by backfill, ${d.missing} missing of ${d.expected}`);
+    console.log(`  PayPal delivery: ${d.live} live, ${d.backfilled} rescued by backfill, ${d.simulated} simulated by PayPal, ${d.missing} missing of ${d.expected}`);
     console.log(`  checks: ${result.checks.length - failed.length}/${result.checks.length} passed`);
     const bad = failed.length || failedScenarios.length || d.missing;
     console.log(`  Verdict: ${bad ? 'FIX FIRST' : 'SHIP'} (AI explanations land with Tijil's src/ai)`);

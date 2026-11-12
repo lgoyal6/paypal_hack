@@ -6,7 +6,7 @@ import type { Money, Payment } from '../contract.js';
 export interface Scenario {
   describe: string;
   expects: string[];
-  run(log: (line: string) => void, opts?: { waitMs?: number }): Promise<Record<string, unknown>>;
+  run(log: (line: string) => void, opts?: { waitMs?: number; simulate?: (eventType: string) => Promise<string> }): Promise<Record<string, unknown>>;
 }
 
 const usd = (value: string): Money => ({ currency_code: 'USD', value });
@@ -50,9 +50,9 @@ export const SCENARIOS: Record<string, Scenario> = {
   },
 
   dispute: {
-    // Observed in sandbox (2026-11-12): a chargeback emits CUSTOMER.DISPUTE.UPDATED about 4 minutes later
-    // (status WAITING_FOR_SELLER_RESPONSE), not CUSTOMER.DISPUTE.CREATED. The capture's own
-    // PAYMENT.CAPTURE.COMPLETED was not recorded by PayPal in that run, so it is not expected here.
+    // Observed in sandbox (2026-11-12): CUSTOMER.DISPUTE.UPDATED arrived 3.5 to 4 minutes after the chargeback
+    // in every run; CUSTOMER.DISPUTE.CREATED arrived in one run and not another, so only UPDATED is expected.
+    // The capture's own PAYMENT.CAPTURE.COMPLETED was missing from PayPal's records in one run.
     describe: "Payment captured, then the buyer's bank files a chargeback",
     expects: ['CUSTOMER.DISPUTE.UPDATED'],
     async run(log) {
@@ -91,9 +91,15 @@ export const SCENARIOS: Record<string, Scenario> = {
         await sleep(15_000);
       }
       const rels = ((d.links as { rel: string }[]) ?? []).map((l) => l.rel).join(', ');
+      if (opts?.simulate) {
+        const eventId = await opts.simulate('CUSTOMER.DISPUTE.RESOLVED');
+        log(`SIMULATED: sandbox left dispute ${id} at ${d.status}; asked PayPal's webhook simulator for CUSTOMER.DISPUTE.RESOLVED (${eventId}).`);
+        log('SIMULATED: real delivery and signature, but a mock payload that is not this dispute. In production PayPal sends this when the dispute closes.');
+        return { ...out, simulated: ['CUSTOMER.DISPUTE.RESOLVED'] };
+      }
       throw new Error(
         `NOT REACHABLE: dispute ${id} is still ${d.status}, actions [${rels}]. ` +
-        'PayPal did not resolve it in time, so CUSTOMER.DISPUTE.RESOLVED was not produced.',
+        'PayPal did not resolve it in time, so CUSTOMER.DISPUTE.RESOLVED was not produced. Run it inside `paydrill drill` to fall back to PayPal\'s simulator.',
       );
     },
   },
