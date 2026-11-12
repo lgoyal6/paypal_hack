@@ -8,7 +8,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, posix, relative } from 'node:path';
 import type { CodeFile, MigrateItem } from '../contract.ts';
 
-export const HELPER = readFileSync(new URL('./template/paypal.js', import.meta.url), 'utf8');
+// Resolves to src/migrate/template from both src/ (tests) and dist/ (built CLI); tsc does not copy .js assets.
+export const HELPER = readFileSync(new URL('../../src/migrate/template/paypal.js', import.meta.url), 'utf8');
 
 interface Splice { start: number; end: number; text: string }
 
