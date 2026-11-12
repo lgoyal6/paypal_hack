@@ -74,7 +74,7 @@ export async function startRelay(opts: {
   backfill?: boolean;
   backfillAfterMs?: number;
 }): Promise<Relay> {
-  const { forwardTo, port = 4807, backfill = true, backfillAfterMs = 20_000 } = opts;
+  const { forwardTo, port = 0, backfill = true, backfillAfterMs = 20_000 } = opts; // 0 = any free port, so runs never collide
   const bus = new EventEmitter();
   const seen = new Map<string, DrillEvent>();
   const simulatedIds = new Set<string>();
@@ -114,8 +114,9 @@ export async function startRelay(opts: {
     });
   });
   await new Promise<void>((r) => server.listen(port, '127.0.0.1', r));
+  const boundPort = (server.address() as { port: number }).port;
 
-  const tunnel = await openTunnel(port);
+  const tunnel = await openTunnel(boundPort);
   try {
     await settle();
     // Only remove webhooks whose paydrill process is gone. Deleting every tunnel webhook killed
