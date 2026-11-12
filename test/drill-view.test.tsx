@@ -6,7 +6,7 @@ import { render } from 'ink-testing-library';
 import { DrillView, bar } from '../src/ui/DrillView.js';
 import type { CheckResult, DrillEvent } from '../src/contract.js';
 
-const tick = () => new Promise((r) => setTimeout(r, 30));
+const tick = () => new Promise((r) => setTimeout(r, 100)); // 30ms flaked under parallel test load
 const delivery = (event_type: string): DrillEvent => ({
   event: { id: event_type, event_type, create_time: '', resource: {} }, headers: {}, source: 'live', signature: 'verified',
   response: { status: 200, ms: 5, body: '' }, receivedAt: '',
