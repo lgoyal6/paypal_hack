@@ -1,0 +1,27 @@
+{
+  "name": "paydrill",
+  "version": "0.0.1",
+  "description": "Real PayPal sandbox events on localhost, plus an AI drill of your webhook handler",
+  "type": "module",
+  "bin": {
+    "paydrill": "bin/paydrill.js"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}
