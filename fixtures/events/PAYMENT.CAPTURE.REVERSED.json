@@ -1,0 +1,45 @@
+{
+  "_source": "docs",
+  "id": "WH-6F207351SC284371F-0KX52201050121307",
+  "event_version": "1.0",
+  "create_time": "2026-11-12T18:00:00Z",
+  "resource_type": "refund",
+  "resource_version": "2.0",
+  "event_type": "PAYMENT.CAPTURE.REVERSED",
+  "summary": "A $ 49.99 USD capture payment was reversed",
+  "resource": {
+    "id": "1Y107995YT783435V",
+    "status": "COMPLETED",
+    "amount": {
+      "currency_code": "USD",
+      "value": "-49.99"
+    },
+    "note_to_payer": "Payment reversed",
+    "create_time": "2026-11-12T18:00:00Z",
+    "update_time": "2026-11-12T18:00:00Z",
+    "links": [
+      {
+        "href": "https://api-m.sandbox.paypal.com/v2/payments/refunds/1Y107995YT783435V",
+        "rel": "self",
+        "method": "GET"
+      },
+      {
+        "href": "https://api-m.sandbox.paypal.com/v2/payments/captures/2GG279541U471931P",
+        "rel": "up",
+        "method": "GET"
+      }
+    ]
+  },
+  "links": [
+    {
+      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-6F207351SC284371F-0KX52201050121307",
+      "rel": "self",
+      "method": "GET"
+    },
+    {
+      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-6F207351SC284371F-0KX52201050121307/resend",
+      "rel": "resend",
+      "method": "POST"
+    }
+  ]
+}
