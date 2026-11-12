@@ -1,0 +1,63 @@
+{
+  "_source": "docs",
+  "id": "WH-COC11055RA711503B-4YM959094A144403T",
+  "event_version": "1.0",
+  "create_time": "2026-11-12T18:00:00Z",
+  "resource_type": "checkout-order",
+  "resource_version": "2.0",
+  "event_type": "CHECKOUT.ORDER.APPROVED",
+  "summary": "An order has been approved by buyer",
+  "resource": {
+    "id": "5O190127TN364715T",
+    "intent": "CAPTURE",
+    "status": "APPROVED",
+    "create_time": "2026-11-12T18:00:00Z",
+    "purchase_units": [
+      {
+        "reference_id": "default",
+        "amount": {
+          "currency_code": "USD",
+          "value": "49.99"
+        },
+        "payee": {
+          "email_address": "merchant@example.com",
+          "merchant_id": "7KNGBPH2U58GQ"
+        },
+        "custom_id": "order_1042",
+        "invoice_id": "INV-1042"
+      }
+    ],
+    "payer": {
+      "name": {
+        "given_name": "John",
+        "surname": "Doe"
+      },
+      "email_address": "buyer@example.com",
+      "payer_id": "QYR5Z8XDVJNXQ"
+    },
+    "links": [
+      {
+        "href": "https://api-m.sandbox.paypal.com/v2/checkout/orders/5O190127TN364715T",
+        "rel": "self",
+        "method": "GET"
+      },
+      {
+        "href": "https://api-m.sandbox.paypal.com/v2/checkout/orders/5O190127TN364715T/capture",
+        "rel": "capture",
+        "method": "POST"
+      }
+    ]
+  },
+  "links": [
+    {
+      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-COC11055RA711503B-4YM959094A144403T",
+      "rel": "self",
+      "method": "GET"
+    },
+    {
+      "href": "https://api-m.sandbox.paypal.com/v1/notifications/webhooks-events/WH-COC11055RA711503B-4YM959094A144403T/resend",
+      "rel": "resend",
+      "method": "POST"
+    }
+  ]
+}
