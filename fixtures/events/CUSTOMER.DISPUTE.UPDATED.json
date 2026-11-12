@@ -1,0 +1,102 @@
+{
+  "_source": "sandbox",
+  "id": "WH-97627958WM2181348-8NT230294J337242X",
+  "create_time": "2026-11-12T09:18:33.520Z",
+  "resource_type": "dispute",
+  "event_type": "CUSTOMER.DISPUTE.UPDATED",
+  "summary": "A dispute was updated with case # PP-R-UPS-10200166",
+  "resource": {
+    "reason": "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
+    "dispute_channel": "EXTERNAL",
+    "create_time": "2026-11-12T09:14:16.078Z",
+    "allowed_response_options": {
+      "accept_claim": {
+        "accept_claim_types": [
+          "REFUND"
+        ]
+      }
+    },
+    "dispute_id": "PP-R-UPS-10200166",
+    "dispute_life_cycle_stage": "CHARGEBACK",
+    "refund_details": {
+      "allowed_refund_amount": {
+        "currency_code": "USD",
+        "value": "12.00"
+      }
+    },
+    "fund_movements": [
+      {
+        "party": "SELLER",
+        "amount": {
+          "currency_code": "USD",
+          "value": "11.20"
+        },
+        "initiated_time": "2026-11-12T09:17:34.000Z",
+        "type": "DEBIT",
+        "reason": "HOLD_PLACED"
+      }
+    ],
+    "offer": {
+      "buyer_requested_amount": {
+        "currency_code": "USD",
+        "value": "12.00"
+      }
+    },
+    "disputed_transactions": [
+      {
+        "buyer_transaction_id": "97T08464YY310520X",
+        "seller_transaction_id": "0AJ078962S536040E",
+        "transaction_status": "HELD",
+        "seller": {
+          "merchant_id": "JQ7EXX22H2NR4",
+          "name": "Test Store"
+        },
+        "seller_protection_eligible": false,
+        "seller_protection_type": "SELLER_PROTECTION_INELIGIBLE"
+      }
+    ],
+    "update_time": "2026-11-12T09:18:02.547Z",
+    "seller_response_due_date": "2026-11-23T04:59:59.000Z",
+    "links": [
+      {
+        "href": "https://api.sandbox.paypal.com/v1/customer/disputes/PP-R-UPS-10200166",
+        "rel": "self",
+        "method": "GET",
+        "encType": "application/json"
+      },
+      {
+        "href": "https://api.sandbox.paypal.com/v1/customer/disputes/PP-R-UPS-10200166/provide-evidence",
+        "rel": "provide_evidence",
+        "method": "POST",
+        "encType": "application/json"
+      },
+      {
+        "href": "https://api.sandbox.paypal.com/v1/customer/disputes/PP-R-UPS-10200166/accept-claim",
+        "rel": "accept_claim",
+        "method": "POST",
+        "encType": "application/json"
+      }
+    ],
+    "dispute_amount": {
+      "currency_code": "USD",
+      "value": "12.00"
+    },
+    "external_reason_code": "1330",
+    "status": "WAITING_FOR_SELLER_RESPONSE"
+  },
+  "links": [
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-97627958WM2181348-8NT230294J337242X",
+      "rel": "self",
+      "method": "GET",
+      "encType": "application/json"
+    },
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-97627958WM2181348-8NT230294J337242X/resend",
+      "rel": "resend",
+      "method": "POST",
+      "encType": "application/json"
+    }
+  ],
+  "event_version": "1.0"
+}

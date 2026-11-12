@@ -1,0 +1,81 @@
+{
+  "_source": "sandbox",
+  "id": "WH-77L82036B48474728-1EM7136259175854Y",
+  "event_version": "1.0",
+  "create_time": "2026-11-12T09:18:26.753Z",
+  "resource_type": "capture",
+  "resource_version": "2.0",
+  "event_type": "PAYMENT.CAPTURE.COMPLETED",
+  "summary": "Payment completed for $ 15.0 USD",
+  "resource": {
+    "id": "8JS50170LC776620H",
+    "amount": {
+      "currency_code": "USD",
+      "value": "15.00"
+    },
+    "final_capture": true,
+    "seller_protection": {
+      "status": "NOT_ELIGIBLE"
+    },
+    "seller_receivable_breakdown": {
+      "gross_amount": {
+        "currency_code": "USD",
+        "value": "15.00"
+      },
+      "paypal_fee": {
+        "currency_code": "USD",
+        "value": "0.88"
+      },
+      "net_amount": {
+        "currency_code": "USD",
+        "value": "14.12"
+      }
+    },
+    "status": "REFUNDED",
+    "processor_response": {
+      "avs_code": "A",
+      "cvv_code": "M",
+      "response_code": "0000"
+    },
+    "supplementary_data": {
+      "related_ids": {
+        "order_id": "9JJ66431J02026501"
+      }
+    },
+    "payee": {
+      "email_address": "sb-merchant@business.example.com",
+      "merchant_id": "JQ7EXX22H2NR4"
+    },
+    "create_time": "2026-11-12T09:18:22Z",
+    "update_time": "2026-11-12T09:18:24Z",
+    "links": [
+      {
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/8JS50170LC776620H",
+        "rel": "self",
+        "method": "GET"
+      },
+      {
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/8JS50170LC776620H/refund",
+        "rel": "refund",
+        "method": "POST"
+      },
+      {
+        "href": "https://api.sandbox.paypal.com/v2/checkout/orders/9JJ66431J02026501",
+        "rel": "up",
+        "method": "GET"
+      }
+    ]
+  },
+  "links": [
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-77L82036B48474728-1EM7136259175854Y",
+      "rel": "self",
+      "method": "GET"
+    },
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-77L82036B48474728-1EM7136259175854Y/resend",
+      "rel": "resend",
+      "method": "POST"
+    }
+  ]
+}

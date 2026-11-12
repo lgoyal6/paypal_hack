@@ -1,0 +1,66 @@
+{
+  "_source": "sandbox",
+  "id": "WH-2826974153807515T-8WG796346A298212J",
+  "event_version": "1.0",
+  "create_time": "2026-11-12T09:18:29.057Z",
+  "resource_type": "refund",
+  "resource_version": "2.0",
+  "event_type": "PAYMENT.CAPTURE.REFUNDED",
+  "summary": "A $ 15.0 USD capture payment was refunded",
+  "resource": {
+    "id": "4NV460512X3031142",
+    "amount": {
+      "currency_code": "USD",
+      "value": "15.00"
+    },
+    "seller_payable_breakdown": {
+      "gross_amount": {
+        "currency_code": "USD",
+        "value": "15.00"
+      },
+      "paypal_fee": {
+        "currency_code": "USD",
+        "value": "0.00"
+      },
+      "net_amount": {
+        "currency_code": "USD",
+        "value": "15.00"
+      },
+      "total_refunded_amount": {
+        "currency_code": "USD",
+        "value": "15.00"
+      }
+    },
+    "status": "COMPLETED",
+    "create_time": "2026-11-12T01:18:24-08:00",
+    "update_time": "2026-11-12T01:18:24-08:00",
+    "payer": {
+      "email_address": "sb-merchant@business.example.com",
+      "merchant_id": "JQ7EXX22H2NR4"
+    },
+    "links": [
+      {
+        "href": "https://api.sandbox.paypal.com/v2/payments/refunds/4NV460512X3031142",
+        "rel": "self",
+        "method": "GET"
+      },
+      {
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/8JS50170LC776620H",
+        "rel": "up",
+        "method": "GET"
+      }
+    ]
+  },
+  "links": [
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-2826974153807515T-8WG796346A298212J",
+      "rel": "self",
+      "method": "GET"
+    },
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-2826974153807515T-8WG796346A298212J/resend",
+      "rel": "resend",
+      "method": "POST"
+    }
+  ]
+}
