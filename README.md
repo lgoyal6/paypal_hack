@@ -12,6 +12,53 @@ Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/).
 - Sandbox webhook delivery is known to be delayed or dropped.
 - Webhook bugs (no signature check, double fulfilment, crashes on disputes) only show up when real money moves.
 
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph PP["PayPal sandbox"]
+    API["Orders / Payments / Disputes APIs"]
+    WH["Webhooks + verify-webhook-signature"]
+    EV["Events API (backfill, resend)"]
+  end
+
+  subgraph CLI["paydrill CLI (Node + TypeScript)"]
+    TRIG["trigger / scenarios / rehearse"]
+    RELAY["Relay: tunnel, signature check,<br/>backfill, routes, chaos<br/>(duplicate, reorder, forge, unknown)"]
+    DRILL["drill: HTTP-only pass/fail"]
+    UI["Ink TUI + web inspector"]
+    COV["coverage / types-gen"]
+    MIG["migrate: inventory, codemods, parity"]
+  end
+
+  subgraph AI["Claude (structured outputs, zod)"]
+    EXP["explain / doctor"]
+    FIX["fix on a new branch"]
+    EVD["dispute evidence + PDF"]
+    SHOP["shopping agent (Playwright)"]
+  end
+
+  APP["Your app on localhost<br/>(webhook handler)"]
+  OUT["PR comment / GitHub Action<br/>MCP server / Claude Code plugin"]
+
+  TRIG -->|real sandbox money movement| API
+  API --> WH
+  WH -->|cloudflared HTTPS tunnel| RELAY
+  EV -->|missed deliveries| RELAY
+  RELAY -->|forward| APP
+  APP -->|status + /_effects| DRILL
+  RELAY --> UI
+  DRILL --> EXP --> FIX
+  FIX -->|rerun the drill| DRILL
+  TRIG --> EVD
+  DRILL --> COV
+  MIG --> APP
+  SHOP --> APP
+  DRILL --> OUT
+```
+
+The rule that holds it together: Claude never decides pass or fail. Verdicts come from real HTTP answers and the app's recorded business effects; Claude only explains, drafts, and proposes, and every event is labeled with where it came from (live, backfilled, simulated by PayPal, replayed, or chaos).
+
 ## How the AI is used
 
 | Feature | What Claude does | What Claude does not do |
