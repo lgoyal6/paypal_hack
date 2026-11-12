@@ -31,7 +31,7 @@ function waitFor(seen: Map<string, DrillEvent>, before: Set<string>, types: stri
 export async function drill(opts: {
   forwardTo: string; scenarios: string[]; timeoutMs: number; simulateAfterMs?: number; log: (l: string) => void;
 }): Promise<DrillResult> {
-  const { forwardTo, scenarios, timeoutMs, simulateAfterMs = 180_000, log } = opts;
+  const { forwardTo, scenarios, timeoutMs, simulateAfterMs = 45 * 60_000, log } = opts;
   const startedAt = new Date().toISOString();
   log(`Opening a tunnel and registering a sandbox webhook -> ${forwardTo}`);
   const relay = await startRelay({ forwardTo });
@@ -100,7 +100,7 @@ register('drill', {
     const result = await drill({
       forwardTo, scenarios: names, log: console.log,
       timeoutMs: Number(flag(args, 'timeout') ?? 120) * 1000,
-      simulateAfterMs: Number(flag(args, 'simulate-after') ?? 180) * 1000,
+      simulateAfterMs: Number(flag(args, 'simulate-after') ?? 2700) * 1000,
     });
 
     const failed = result.checks.filter((c) => !c.pass);

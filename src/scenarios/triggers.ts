@@ -2,6 +2,7 @@
 import { paypal, call } from '../paypal/client.js';
 import { register } from '../registry.js';
 import type { Money, Payment } from '../contract.js';
+import { readyToAdjudicate, advance } from './disputes.js';
 
 export interface Scenario {
   describe: string;
@@ -65,42 +66,42 @@ export const SCENARIOS: Record<string, Scenario> = {
   },
 
   'dispute-lost': {
-    // Seller accepts the claim (buyer wins). Observed in sandbox: accept-claim moves a chargeback to
-    // UNDER_REVIEW, and CUSTOMER.DISPUTE.RESOLVED did not arrive within 3 minutes. adjudicate is used
-    // if PayPal offers it. If neither resolves the dispute in time, this fails loudly instead of pretending.
-    describe: 'Chargeback opened, seller accepts the claim, PayPal resolves for the buyer',
-    expects: ['CUSTOMER.DISPUTE.UPDATED', 'CUSTOMER.DISPUTE.RESOLVED'],
+    // Real path: adjudicate a pooled dispute PayPal already offers adjudicate on (see disputes.ts), which yields a
+    // real CUSTOMER.DISPUTE.RESOLVED for that same dispute about 6.5 minutes later. With no ready dispute it walks
+    // the full real path on a new chargeback (30+ minutes). Only if that runs out of time, and the caller allows it,
+    // does it fall back to PayPal's webhook simulator, labeled as simulated.
+    describe: 'PayPal resolves a real dispute for the buyer (fast with "paydrill disputes prepare" run 30 min ahead)',
+    expects: ['CUSTOMER.DISPUTE.RESOLVED'],
     async run(log, opts) {
-      const out = await SCENARIOS.dispute.run(log);
-      const id = out.disputeId as string;
-      const deadline = Date.now() + (opts?.waitMs ?? 600_000);
-      let accepted = false;
-      let d: Record<string, unknown> = {};
-      while (Date.now() < deadline) {
-        d = await paypal.getDispute(id);
-        const rels = ((d.links as { rel: string }[]) ?? []).map((l) => l.rel);
-        if (d.status === 'RESOLVED') { log(`dispute ${id} resolved`); return { ...out, resolved: true }; }
-        if (rels.includes('adjudicate')) {
-          await paypal.adjudicate(id, 'BUYER_FAVOR');
-          log(`adjudicated ${id}: BUYER_FAVOR`);
-        } else if (!accepted && rels.includes('accept_claim')) {
-          await call('POST', `/v1/customer/disputes/${id}/accept-claim`, { note: 'paydrill: seller accepts the claim' });
-          accepted = true;
-          log(`seller accepted the claim on ${id}`);
-        }
-        await sleep(15_000);
+      const deadline = Date.now() + (opts?.waitMs ?? 45 * 60_000);
+      let target = await readyToAdjudicate();
+      let out: Record<string, unknown>;
+      if (target) {
+        log(`using pooled dispute ${target.disputeId} (capture ${target.captureId}), already adjudicable`);
+        out = { disputeId: target.disputeId, captureId: target.captureId, pooled: true };
+      } else {
+        log('no adjudicable dispute in the pool; walking the full real path (tip: paydrill disputes prepare)');
+        out = await SCENARIOS.dispute.run(log);
       }
-      const rels = ((d.links as { rel: string }[]) ?? []).map((l) => l.rel).join(', ');
+      const id = out.disputeId as string;
+      while (Date.now() < deadline) {
+        const s = await advance(id);
+        if (s === 'accepted') log(`seller accepted the claim on ${id}; waiting for PayPal to offer adjudicate`);
+        if (s === 'ready') {
+          await paypal.adjudicate(id, 'BUYER_FAVOR');
+          log(`adjudicated ${id}: BUYER_FAVOR. Real CUSTOMER.DISPUTE.RESOLVED usually follows in about 6.5 minutes.`);
+          return { ...out, adjudicated: true };
+        }
+        await sleep(20_000);
+      }
+      const d = await paypal.getDispute(id);
       if (opts?.simulate) {
         const eventId = await opts.simulate('CUSTOMER.DISPUTE.RESOLVED');
-        log(`SIMULATED: sandbox left dispute ${id} at ${d.status}; asked PayPal's webhook simulator for CUSTOMER.DISPUTE.RESOLVED (${eventId}).`);
-        log('SIMULATED: real delivery and signature, but a mock payload that is not this dispute. In production PayPal sends this when the dispute closes.');
+        log(`SIMULATED: dispute ${id} did not become adjudicable in time (${d.status}); asked PayPal's webhook simulator for CUSTOMER.DISPUTE.RESOLVED (${eventId}).`);
+        log('SIMULATED: real delivery and signature, mock payload that is not this dispute. Run "paydrill disputes prepare" ahead of time for a real one.');
         return { ...out, simulated: ['CUSTOMER.DISPUTE.RESOLVED'] };
       }
-      throw new Error(
-        `NOT REACHABLE: dispute ${id} is still ${d.status}, actions [${rels}]. ` +
-        'PayPal did not resolve it in time, so CUSTOMER.DISPUTE.RESOLVED was not produced. Run it inside `paydrill drill` to fall back to PayPal\'s simulator.',
-      );
+      throw new Error(`NOT REACHABLE in time: dispute ${id} is ${d.status}. Run "paydrill disputes prepare" about 30 minutes ahead.`);
     },
   },
 };
