@@ -8,3 +8,4 @@ import './scenarios/rehearse.js';
 import './mcp/server.js';
 import './relay/record.js';
 import './agent/store.js';
+import './ai/commands.js';
