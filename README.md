@@ -82,15 +82,16 @@ Install the Claude Code plugin from this repo with `/plugin marketplace add lgoy
 
 ## Known gaps
 
-Failures and limits first. This section is kept current with every failure found.
+Failures and limits first.
 
-- **The AI features have not been run against the live Claude API yet.** No API key was available while building the AI lane. Requests reach the API (a fake key returns 401), and every deterministic part is tested, but no real verdict, fix, evidence draft, migration glue or shopper run has been produced. Run them with a key before recording the demo.
-- **The AI commands have not been run end to end with a live drill.** The PayPal lane and the AI lane are both on main and wired into one CLI, but `drill --project`, `explain` and `fix` have not yet run together against the sandbox with a real Claude key. Migrate parity runs (Stripe test mode against PayPal sandbox) are not built yet.
-- **Four fixtures are still docs-shaped.** Five event types are real sandbox recordings (`"_source": "sandbox"`); `PAYMENT.CAPTURE.DENIED`, `PENDING`, `REVERSED` and `CHECKOUT.ORDER.APPROVED` still follow PayPal's documented shapes with made-up IDs.
-- **Contract gaps to fix after merging.** `EvidencePacket` has no evidence type field, so the type is carried in the notes header. `DrillEvent` has no raw body, which forged-event replay needs. The developer's app verifies signatures against its own webhook ID, which must match the one paydrill creates. The verdict is computed from checks inside the current contract, not by the model.
-- **`migrate` covers JS and TS one-time payments, refunds, webhooks and idempotency.** Saved customers, metadata and subscriptions are flagged for a human. Connect, Issuing, Terminal, Treasury, Radar and Stripe Tax are refused with the reason. A migration is only called Verified when a parity drill shows the same business calls on Stripe and PayPal; without parity runs every item is "migrated, unverified" or worse.
-- **The agent-readiness run stops at PayPal approval.** Buyer approval happens in PayPal's own window, so the shopper reports `paypal-approval` rather than completing the purchase.
-- **The migrated `paypal.js` helper is syntax-checked, not yet run against the sandbox.**
+- **Not yet run end to end on the sandbox from this lane.** The deterministic parts have tests (43), and these ran for real on a Claude plan without an API key: `explain` and `fix` on the demo shop, `new`, the shopping agent (`ready`), and `explain` over MCP. Commands that move sandbox money (`drill --ui`, `fix --start`, `heal`, `parity`, `events`, `webhook create`) need PayPal sandbox keys, and `parity` also a Stripe test key; they were not run here.
+- **`parity` verifies the webhook path only.** It drives real Stripe and PayPal webhooks into both apps and compares business calls. Stripe SDK calls made from the app's own endpoints (checkout, refunds) are not exercised and stay "migrated, unverified". The PayPal dispute scenario only promises `CUSTOMER.DISPUTE.UPDATED`, so dispute parity can show DIFFERENT when `CREATED` does not arrive.
+- **Signature verification needs one shared webhook.** Set `PAYPAL_WEBHOOK_ID` (from `paydrill webhook create`) for both paydrill and your app. Without it, paydrill uses a temporary webhook your app cannot verify against, and warns. Backfilled events carry no signature, so a verifying app rejects them.
+- **Four fixtures are still docs-shaped.** Five event types are real sandbox recordings (`"_source": "sandbox"`); `PAYMENT.CAPTURE.DENIED`, `PENDING`, `REVERSED` and `CHECKOUT.ORDER.APPROVED` follow PayPal's documented shapes with made-up IDs.
+- **Contract gaps.** `EvidencePacket` has no evidence type field, so the type is carried in the notes header. `DrillEvent` has no raw body.
+- **`migrate` covers JS and TS one-time payments, refunds, webhooks and idempotency.** Saved customers, metadata and subscriptions are flagged for a human. Connect, Issuing, Terminal, Treasury, Radar and Stripe Tax are refused with the reason.
+- **The agent-readiness run stops at PayPal approval.** Buyer approval happens in PayPal's own window, so the agent reports `paypal-approval` rather than completing the purchase.
+- **`heal` in CI needs an Anthropic API key.** Claude Code (the no-key path) is not logged in on CI runners.
 
 ## License
 
