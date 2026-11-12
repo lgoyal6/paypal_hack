@@ -18,7 +18,8 @@
     "build": "tsc -p .",
     "dev": "tsx src/cli.ts",
     "typecheck": "tsc -p . --noEmit",
-    "test": "tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\" \"src/**/*.test.ts\""
+    "test": "tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\" \"src/**/*.test.ts\"",
+    "prepare": "tsc -p ."
   },
   "license": "MIT",
   "devDependencies": {
