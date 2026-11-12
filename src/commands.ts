@@ -5,3 +5,4 @@ import './drill.js';
 import './scenarios/disputes.js';
 import './init/init.js';
 import './scenarios/rehearse.js';
+import './mcp/server.js';
