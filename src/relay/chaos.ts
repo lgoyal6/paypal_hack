@@ -51,9 +51,11 @@ export async function runChaos(forwardTo: string, real: DrillEvent[], slowMs = 3
     create_time: new Date().toISOString(), resource: {},
   };
   const r = await forward(forwardTo, unknown, {}, 'chaos-unknown', 'unsigned');
+  // Unsigned, so a handler that verifies signatures rightly answers 4xx. What must not happen is a crash:
+  // a 5xx (or no answer) makes PayPal retry an event the app will never handle.
   checks.push({
-    check: 'unknown-type', eventType: unknown.event_type, pass: ok(r.status), response: r,
-    note: 'Non-2xx makes PayPal retry an event the app will never handle.',
+    check: 'unknown-type', eventType: unknown.event_type, pass: r.status > 0 && r.status < 500, response: r,
+    note: 'A 5xx makes PayPal retry an event the app will never handle. 2xx, or 4xx for an unsigned event, passes.',
   });
 
   for (const c of [...checks]) {
