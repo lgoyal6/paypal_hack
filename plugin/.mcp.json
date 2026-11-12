@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "paydrill": { "command": "npx", "args": ["-y", "paydrill", "mcp"] }
+  }
+}

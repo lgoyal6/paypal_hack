@@ -1,0 +1,14 @@
+{
+  "name": "paydrill",
+  "description": "paydrill: test your PayPal integration with real sandbox events.",
+  "owner": {
+    "name": "paydrill team"
+  },
+  "plugins": [
+    {
+      "name": "paydrill",
+      "source": "./plugin",
+      "description": "Drill your PayPal webhook handler with real sandbox events, then fix what breaks."
+    }
+  ]
+}
