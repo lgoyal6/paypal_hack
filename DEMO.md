@@ -5,7 +5,7 @@ Record only real runs: real sandbox events, real Claude output. Say on screen th
 | Time | Beat | On screen |
 |---|---|---|
 | 0:00 | PayPal has no CLI; its simulator sends fake events; webhook bugs ship. | PayPal simulator page, then the demo shop's handler |
-| 0:20 | Setup in one command. | `npx paydrill init` detects the Express app |
+| 0:20 | Setup in one command. | `npx github:lgoyal6/paypal_hack init` detects the Express app |
 | 0:40 | A real chargeback arrives in the terminal. | `paydrill trigger dispute` |
 | 1:10 | The drill goes red: forged payment accepted, dispute crash, unknown event 500, double shipping. Claude names the lines. | `paydrill drill`, then `doctor` showing PROVEN risks |
 | 1:40 | The fix lands on a branch and the rerun goes green; coverage climbs. | `paydrill fix`, then `coverage` before and after |
