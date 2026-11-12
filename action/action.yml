@@ -19,6 +19,21 @@ inputs:
   paypal-client-secret:
     description: Sandbox secret (store it as a repository secret)
     required: true
+  project:
+    description: Folder with your webhook handler code, for payment coverage and heal
+    default: '.'
+  heal:
+    description: On fix-first, write a fix, rerun the drill on it, and open a PR only if it is green (needs anthropic-api-key, start, and contents/pull-requests write)
+    default: 'false'
+  start:
+    description: Command that starts your app from its folder, used by heal to run the patched code
+    default: ''
+  rerun-url:
+    description: Where heal's patched app listens (must differ from forward-to, since your original app is still running)
+    default: ''
+  anthropic-api-key:
+    description: Anthropic API key for heal (store it as a repository secret)
+    default: ''
   comment:
     description: Post or update a PR comment with the result
     default: 'true'
@@ -65,6 +80,35 @@ runs:
         if [ $code -eq 0 ]; then echo "verdict=ship" >> "$GITHUB_OUTPUT"; else echo "verdict=fix-first" >> "$GITHUB_OUTPUT"; fi
         echo "code=$code" >> "$GITHUB_OUTPUT"
         cat "$RUNNER_TEMP/paydrill.md" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+    - name: Payment coverage
+      if: always() && steps.drill.outputs.code != ''
+      shell: bash
+      run: |
+        out=$(node "$GITHUB_ACTION_PATH/../bin/paydrill.js" coverage "${{ inputs.project }}" --drill "$RUNNER_TEMP/paydrill.json" --write) || exit 0
+        mv coverage.json payment-coverage.svg "$RUNNER_TEMP/" 2>/dev/null || true
+        printf '\n### Payment coverage\n\n```\n%s\n```\n' "$out" | tee -a "$RUNNER_TEMP/paydrill.md" >> "$GITHUB_STEP_SUMMARY"
+    - name: Upload coverage badge
+      if: always() && steps.drill.outputs.code != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: paydrill-coverage
+        path: |
+          ${{ runner.temp }}/payment-coverage.svg
+          ${{ runner.temp }}/coverage.json
+          ${{ runner.temp }}/paydrill.json
+        if-no-files-found: ignore
+    - name: Self-healing PR
+      if: inputs.heal == 'true' && steps.drill.outputs.code != '0' && inputs.anthropic-api-key != ''
+      shell: bash
+      env:
+        PAYPAL_CLIENT_ID: ${{ inputs.paypal-client-id }}
+        PAYPAL_CLIENT_SECRET: ${{ inputs.paypal-client-secret }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        git config user.name "paydrill" && git config user.email "paydrill@users.noreply.github.com"
+        node "$GITHUB_ACTION_PATH/../bin/paydrill.js" heal --drill "$RUNNER_TEMP/paydrill.json" \
+          --start "${{ inputs.start }}" --rerun-url "${{ inputs.rerun-url }}" "${{ inputs.project }}" | tee -a "$GITHUB_STEP_SUMMARY" || true
     - name: Comment on the PR
       if: inputs.comment == 'true' && github.event_name == 'pull_request'
       shell: bash
