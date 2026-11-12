@@ -20,16 +20,17 @@ export async function structured<T extends z.ZodType>(
   effort: Effort = 'high',
 ): Promise<z.infer<T>> {
   client ??= new Anthropic();
-  const msg = await client.beta.messages.parse({
+  // Streaming: large max_tokens on a plain request is refused by the SDK (10-minute rule).
+  const msg = await client.beta.messages.stream({
     model: MODEL,
-    max_tokens: 32000,
+    max_tokens: 64000,
     system,
     messages: [{ role: 'user', content: user }],
     output_config: { effort, format: betaZodOutputFormat(schema) },
     // Server-side fallback if the model declines; routed by refusal category.
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
-  });
+  }).finalMessage();
   if (msg.stop_reason === 'refusal') throw new Error(`Claude declined: ${msg.stop_details?.explanation ?? 'no reason given'}`);
   if (msg.stop_reason === 'max_tokens') throw new Error('Claude ran out of output tokens; try fewer files');
   if (msg.parsed_output == null) throw new Error('Claude returned output that did not match the schema');
