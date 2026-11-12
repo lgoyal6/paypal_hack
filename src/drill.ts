@@ -7,6 +7,7 @@ import { runChaos } from './relay/chaos.js';
 import { allScenarios, type Scenario } from './scenarios/triggers.js';
 import { loadConfig } from './scenarios/yaml.js';
 import type { CheckResult, DrillEvent, DrillResult, ScenarioResult } from './contract.js';
+import { renderComment } from './report/markdown.js';
 
 function flag(args: string[], name: string): string | undefined {
   const i = args.indexOf(`--${name}`);
@@ -124,6 +125,8 @@ register('drill', {
     console.log(`  Verdict: ${bad ? 'FIX FIRST' : 'SHIP'} (AI explanations land with Tijil's src/ai)`);
     const out = flag(args, 'out');
     if (out) { fs.writeFileSync(out, JSON.stringify(result, null, 2)); console.log(`  full result: ${out}`); }
+    const md = flag(args, 'markdown');
+    if (md) { fs.writeFileSync(md, renderComment(result)); console.log(`  PR comment: ${md}`); }
     if (bad) process.exitCode = 1;
   },
 });

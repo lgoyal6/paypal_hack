@@ -1,0 +1,88 @@
+name: paydrill drill
+description: Drill your PayPal webhook handler with real sandbox events, then post the result on the pull request.
+branding:
+  icon: check-circle
+  color: blue
+inputs:
+  forward-to:
+    description: URL of your running webhook handler, e.g. http://localhost:3000/webhooks/paypal (start your app in an earlier step)
+    required: true
+  scenarios:
+    description: Comma-separated scenarios (built-in or from paydrill.yml)
+    default: payment,refund
+  timeout:
+    description: Seconds to wait for each scenario's events
+    default: '120'
+  paypal-client-id:
+    description: Sandbox client ID (store it as a repository secret)
+    required: true
+  paypal-client-secret:
+    description: Sandbox secret (store it as a repository secret)
+    required: true
+  comment:
+    description: Post or update a PR comment with the result
+    default: 'true'
+  github-token:
+    description: Token used to comment on the PR
+    default: ${{ github.token }}
+outputs:
+  verdict:
+    description: ship or fix-first
+    value: ${{ steps.drill.outputs.verdict }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+    - name: Install cloudflared
+      shell: bash
+      run: |
+        curl -fsSL -o "$RUNNER_TEMP/cloudflared" https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+        chmod +x "$RUNNER_TEMP/cloudflared"
+        echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+    - name: Build paydrill
+      shell: bash
+      run: |
+        cd "$GITHUB_ACTION_PATH/.."
+        npm ci --no-audit --no-fund
+        npm run build
+    - name: Drill
+      id: drill
+      shell: bash
+      env:
+        PAYPAL_CLIENT_ID: ${{ inputs.paypal-client-id }}
+        PAYPAL_CLIENT_SECRET: ${{ inputs.paypal-client-secret }}
+      run: |
+        set +e
+        node "$GITHUB_ACTION_PATH/../bin/paydrill.js" drill \
+          --forward-to "${{ inputs.forward-to }}" \
+          --scenarios "${{ inputs.scenarios }}" \
+          --timeout "${{ inputs.timeout }}" \
+          --out "$RUNNER_TEMP/paydrill.json" \
+          --markdown "$RUNNER_TEMP/paydrill.md"
+        code=$?
+        if [ $code -eq 0 ]; then echo "verdict=ship" >> "$GITHUB_OUTPUT"; else echo "verdict=fix-first" >> "$GITHUB_OUTPUT"; fi
+        echo "code=$code" >> "$GITHUB_OUTPUT"
+        cat "$RUNNER_TEMP/paydrill.md" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+    - name: Comment on the PR
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        [ -f "$RUNNER_TEMP/paydrill.md" ] || exit 0
+        id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate --jq '.[] | select(.body | startswith("<!-- paydrill-drill -->")) | .id' | head -1)
+        if [ -n "$id" ]; then
+          gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@"$RUNNER_TEMP/paydrill.md" > /dev/null
+        else
+          gh pr comment "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/paydrill.md"
+        fi
+    - name: Fail on fix-first
+      if: steps.drill.outputs.code != '0'
+      shell: bash
+      run: |
+        echo "paydrill: fix first (see the PR comment or job summary)"
+        exit 1
