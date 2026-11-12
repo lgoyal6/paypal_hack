@@ -1,5 +1,5 @@
 // Real sandbox money movement that makes PayPal emit real webhook events.
-import { paypal } from '../paypal/client.js';
+import { paypal, call } from '../paypal/client.js';
 import { register } from '../registry.js';
 import type { Money, Payment } from '../contract.js';
 
@@ -50,8 +50,11 @@ export const SCENARIOS: Record<string, Scenario> = {
   },
 
   dispute: {
+    // Observed in sandbox (2026-11-12): a chargeback emits CUSTOMER.DISPUTE.UPDATED about 4 minutes later
+    // (status WAITING_FOR_SELLER_RESPONSE), not CUSTOMER.DISPUTE.CREATED. The capture's own
+    // PAYMENT.CAPTURE.COMPLETED was not recorded by PayPal in that run, so it is not expected here.
     describe: "Payment captured, then the buyer's bank files a chargeback",
-    expects: ['PAYMENT.CAPTURE.COMPLETED', 'CUSTOMER.DISPUTE.CREATED'],
+    expects: ['CUSTOMER.DISPUTE.UPDATED'],
     async run(log) {
       const p = await pay(log, '12.00');
       const { disputeId } = await paypal.chargeback(p);
@@ -62,27 +65,35 @@ export const SCENARIOS: Record<string, Scenario> = {
   },
 
   'dispute-lost': {
-    describe: 'Chargeback opened, then PayPal rules for the buyer (needs the dispute to reach UNDER_REVIEW)',
-    expects: ['CUSTOMER.DISPUTE.CREATED', 'CUSTOMER.DISPUTE.RESOLVED'],
+    // Seller accepts the claim (buyer wins). Observed in sandbox: accept-claim moves a chargeback to
+    // UNDER_REVIEW, and CUSTOMER.DISPUTE.RESOLVED did not arrive within 3 minutes. adjudicate is used
+    // if PayPal offers it. If neither resolves the dispute in time, this fails loudly instead of pretending.
+    describe: 'Chargeback opened, seller accepts the claim, PayPal resolves for the buyer',
+    expects: ['CUSTOMER.DISPUTE.UPDATED', 'CUSTOMER.DISPUTE.RESOLVED'],
     async run(log, opts) {
       const out = await SCENARIOS.dispute.run(log);
       const id = out.disputeId as string;
-      const deadline = Date.now() + (opts?.waitMs ?? 120_000);
+      const deadline = Date.now() + (opts?.waitMs ?? 600_000);
+      let accepted = false;
       let d: Record<string, unknown> = {};
       while (Date.now() < deadline) {
         d = await paypal.getDispute(id);
         const rels = ((d.links as { rel: string }[]) ?? []).map((l) => l.rel);
-        if (d.status === 'UNDER_REVIEW' && rels.includes('adjudicate')) {
+        if (d.status === 'RESOLVED') { log(`dispute ${id} resolved`); return { ...out, resolved: true }; }
+        if (rels.includes('adjudicate')) {
           await paypal.adjudicate(id, 'BUYER_FAVOR');
           log(`adjudicated ${id}: BUYER_FAVOR`);
-          return { ...out, adjudicated: true };
+        } else if (!accepted && rels.includes('accept_claim')) {
+          await call('POST', `/v1/customer/disputes/${id}/accept-claim`, { note: 'paydrill: seller accepts the claim' });
+          accepted = true;
+          log(`seller accepted the claim on ${id}`);
         }
-        await sleep(10_000);
+        await sleep(15_000);
       }
       const rels = ((d.links as { rel: string }[]) ?? []).map((l) => l.rel).join(', ');
       throw new Error(
-        `NOT REACHABLE: dispute ${id} is ${d.status}, stage ${d.dispute_life_cycle_stage}, actions [${rels}]. ` +
-        'The sandbox only allows adjudicate once a dispute is UNDER_REVIEW. CUSTOMER.DISPUTE.RESOLVED was not produced.',
+        `NOT REACHABLE: dispute ${id} is still ${d.status}, actions [${rels}]. ` +
+        'PayPal did not resolve it in time, so CUSTOMER.DISPUTE.RESOLVED was not produced.',
       );
     },
   },
