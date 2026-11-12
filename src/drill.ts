@@ -91,7 +91,7 @@ export async function drill(opts: {
 }
 
 register('drill', {
-  describe: 'Real sandbox events plus chaos against your handler: paydrill drill --forward-to <url>',
+  describe: 'Real sandbox events plus chaos against your handler: paydrill drill --forward-to <url> [--project dir] [--out result.json]',
   async run(args) {
     const forwardTo = flag(args, 'forward-to');
     if (!forwardTo) throw new Error('--forward-to is required');
@@ -115,9 +115,12 @@ register('drill', {
     console.log(`  PayPal delivery: ${d.live} live, ${d.backfilled} rescued by backfill, ${d.simulated} simulated by PayPal, ${d.missing} missing of ${d.expected}`);
     console.log(`  checks: ${result.checks.length - failed.length}/${result.checks.length} passed`);
     const bad = failed.length || failedScenarios.length || d.missing;
-    console.log(`  Verdict: ${bad ? 'FIX FIRST' : 'SHIP'} (AI explanations land with Tijil's src/ai)`);
+    console.log(`  Verdict: ${bad ? 'FIX FIRST' : 'SHIP'}`);
     const out = flag(args, 'out');
     if (out) { fs.writeFileSync(out, JSON.stringify(result, null, 2)); console.log(`  full result: ${out}`); }
+    // Claude explains the failures down to the line; pass/fail above stays deterministic.
+    const project = flag(args, 'project');
+    if (project && bad) await (await import('./ai/commands.js')).explain(result, project);
     if (bad) process.exitCode = 1;
   },
 });
