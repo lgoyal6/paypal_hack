@@ -2,10 +2,32 @@
 // Beyond a plain forwarder: verifies each signature with PayPal, and backfills events PayPal
 // recorded but never delivered (sandbox delivery is known to drop and delay events).
 import http from 'node:http';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { EventEmitter } from 'node:events';
 import { paypal, call } from '../paypal/client.js';
 import { openTunnel, settle } from './tunnel.js';
 import type { DrillEvent, EventSource, HandlerResponse, PayPalEvent, SignatureStatus } from '../contract.js';
+
+// Webhooks this machine's paydrill processes registered, with the owning pid, so a crashed run's webhook
+// can be cleaned up without touching webhooks that belong to runs still alive.
+const LEDGER = path.join(os.homedir(), '.paydrill', 'webhooks.json');
+type Ledger = Record<string, { pid: number; startedAt: string }>;
+const readLedger = (): Ledger => { try { return JSON.parse(fs.readFileSync(LEDGER, 'utf8')); } catch { return {}; } };
+const writeLedger = (l: Ledger) => { fs.mkdirSync(path.dirname(LEDGER), { recursive: true }); fs.writeFileSync(LEDGER, JSON.stringify(l, null, 2)); };
+const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+function trackWebhook(id: string) { const l = readLedger(); l[id] = { pid: process.pid, startedAt: new Date().toISOString() }; writeLedger(l); }
+function untrackWebhook(id: string) { const l = readLedger(); delete l[id]; writeLedger(l); }
+async function pruneDeadWebhooks() {
+  const l = readLedger();
+  for (const [id, owner] of Object.entries(l)) {
+    if (alive(owner.pid)) continue;
+    await paypal.deleteWebhook(id).catch(() => {});
+    delete l[id];
+  }
+  writeLedger(l);
+}
 
 const PASS_HEADERS = [
   'paypal-auth-algo', 'paypal-cert-url', 'paypal-transmission-id',
@@ -96,11 +118,15 @@ export async function startRelay(opts: {
   const tunnel = await openTunnel(port);
   try {
     await settle();
-    // Remove webhooks left by earlier runs (PayPal caps an app at 10), then register ours.
-    for (const w of (await call('GET', '/v1/notifications/webhooks')).webhooks ?? []) {
-      if (String(w.url).includes('trycloudflare.com')) await paypal.deleteWebhook(w.id).catch(() => {});
+    // Only remove webhooks whose paydrill process is gone. Deleting every tunnel webhook killed
+    // concurrent runs (a rehearsal lost its webhook when a record session started).
+    await pruneDeadWebhooks();
+    const existing: { id: string }[] = (await call('GET', '/v1/notifications/webhooks')).webhooks ?? [];
+    if (existing.length >= 10) {
+      throw new Error('This sandbox app already has 10 webhooks (PayPal\'s cap). Delete unused ones in the developer dashboard.');
     }
     webhookId = (await paypal.createWebhook(tunnel.url)).webhookId;
+    trackWebhook(webhookId);
   } catch (e) {
     tunnel.close();
     server.close();
@@ -134,6 +160,7 @@ export async function startRelay(opts: {
     async close() {
       if (poller) clearInterval(poller);
       await paypal.deleteWebhook(webhookId).catch(() => {});
+      untrackWebhook(webhookId);
       tunnel.close();
       server.close();
     },
