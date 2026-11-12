@@ -8,7 +8,7 @@ import type { Patch } from '../contract.ts';
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 
-export interface PatchedBranch { branch: string; worktree: string; commit: string }
+export interface PatchedBranch { branch: string; worktree: string; root: string; commit: string } // worktree = project dir inside root
 
 /** Create `branch` from HEAD in a new worktree, apply and commit the patch there. */
 export function applyOnBranch(repo: string, patch: Patch, branch: string, message: string): PatchedBranch {
@@ -25,10 +25,10 @@ export function applyOnBranch(repo: string, patch: Patch, branch: string, messag
   execFileSync('rm', [file]);
   git(worktree, 'add', '-A');
   git(worktree, '-c', 'user.name=paydrill', '-c', 'user.email=paydrill@users.noreply.github.com', 'commit', '-q', '-m', message);
-  return { branch, worktree: join(worktree, prefix), commit: git(worktree, 'rev-parse', 'HEAD') };
+  return { branch, worktree: join(worktree, prefix), root: worktree, commit: git(worktree, 'rev-parse', 'HEAD') };
 }
 
-/** Remove the worktree (the branch and its commit stay). */
-export function removeWorktree(repo: string, worktree: string) {
-  git(repo, 'worktree', 'remove', '--force', worktree);
+/** Remove the worktree (the branch and its commit stay). Pass PatchedBranch.root. */
+export function removeWorktree(repo: string, root: string) {
+  git(repo, 'worktree', 'remove', '--force', root);
 }
