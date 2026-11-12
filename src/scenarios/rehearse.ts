@@ -62,15 +62,24 @@ register('rehearse', {
       stages.push(cur);
       console.log(`\n▶ ${name}`);
     };
-    relay.bus.on('delivery', (d: DrillEvent) => { cur?.deliveries.push(d); console.log(`    ${formatDelivery(d)}`); });
+    // PayPal sends every event of the app to every webhook, so other runs' events arrive too.
+    // Keep only events that mention this rehearsal's order, capture or dispute.
+    const ids = new Set<string>();
+    const ours = (d: DrillEvent) => { const s = JSON.stringify(d.event.resource); return [...ids].some((id) => s.includes(id)); };
+    relay.bus.on('delivery', (d: DrillEvent) => {
+      cur?.deliveries.push(d);
+      if (!ids.size || ours(d)) console.log(`    ${formatDelivery(d)}`);
+    });
     relay.bus.on('warn', (w: string) => console.log(`    warn: ${w}`));
 
     let failed: string | null = null;
     try {
       begin('opened');
       const payment = await paypal.cardPayment({ currency_code: 'USD', value: '24.00' }, 'paydrill rehearsal order');
+      ids.add(payment.orderId).add(payment.captureId);
       const { disputeId } = await paypal.chargeback(payment);
       if (!disputeId) throw new Error('chargeback produced no dispute');
+      ids.add(disputeId);
       console.log(`    chargeback on ${payment.captureId} -> dispute ${disputeId}`);
 
       begin('evidence due');
@@ -109,6 +118,7 @@ register('rehearse', {
     console.log('\nTimeline');
     let bad = Boolean(failed);
     for (const s of stages) {
+      s.deliveries = s.deliveries.filter(ours);
       const mins = (((s.endedAt ?? Date.now()) - s.startedAt) / 60_000).toFixed(1);
       const answers = s.deliveries.map((x) => `${x.event.event_type.replace('CUSTOMER.DISPUTE.', '')}:${x.response.status}`);
       const appFailed = s.deliveries.some((x) => x.response.status < 200 || x.response.status >= 300);

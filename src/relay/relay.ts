@@ -128,12 +128,21 @@ export async function startRelay(opts: {
     // Only remove webhooks whose paydrill process is gone. Deleting every tunnel webhook killed
     // concurrent runs (a rehearsal lost its webhook when a record session started).
     await pruneDeadWebhooks();
-    const existing: { id: string }[] = (await call('GET', '/v1/notifications/webhooks')).webhooks ?? [];
-    if (existing.length >= 10) {
-      throw new Error('This sandbox app already has 10 webhooks (PayPal\'s cap). Delete unused ones in the developer dashboard.');
+    const appWebhook = process.env.PAYPAL_WEBHOOK_ID;
+    if (appWebhook) {
+      // The app verifies signatures against its own webhook ID, so deliveries must come through that webhook.
+      // Point it at this tunnel instead of creating a new one; it is the app's, so it is never deleted.
+      await call('PATCH', `/v1/notifications/webhooks/${appWebhook}`, [{ op: 'replace', path: '/url', value: tunnel.url }]);
+      webhookId = appWebhook;
+    } else {
+      const existing: { id: string }[] = (await call('GET', '/v1/notifications/webhooks')).webhooks ?? [];
+      if (existing.length >= 10) {
+        throw new Error('This sandbox app already has 10 webhooks (PayPal\'s cap). Delete unused ones in the developer dashboard.');
+      }
+      webhookId = (await paypal.createWebhook(tunnel.url)).webhookId;
+      trackWebhook(webhookId);
+      bus.emit('warn', `using a temporary webhook ${webhookId}. If your app verifies signatures, run "paydrill webhook create" once and set PAYPAL_WEBHOOK_ID for both.`);
     }
-    webhookId = (await paypal.createWebhook(tunnel.url)).webhookId;
-    trackWebhook(webhookId);
   } catch (e) {
     tunnel.close();
     server.close();
@@ -166,8 +175,10 @@ export async function startRelay(opts: {
     },
     async close() {
       if (poller) clearInterval(poller);
-      await paypal.deleteWebhook(webhookId).catch(() => {});
-      untrackWebhook(webhookId);
+      if (webhookId !== process.env.PAYPAL_WEBHOOK_ID) { // never delete the app's own webhook
+        await paypal.deleteWebhook(webhookId).catch(() => {});
+        untrackWebhook(webhookId);
+      }
       tunnel.close();
       server.close();
     },
