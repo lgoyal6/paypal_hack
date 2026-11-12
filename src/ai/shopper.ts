@@ -11,6 +11,10 @@ export interface Blocker { id: string; severity: 'high' | 'medium'; title: strin
 const CAPTCHA = /captcha|recaptcha|hcaptcha|cf-turnstile|prove you are human/i;
 
 export function checkPages(store: string, checkout: string): Blocker[] {
+  // Stylesheets can name a CAPTCHA without showing one; only markup and scripts count.
+  const noCss = (html: string) => html.replace(/<style[\s\S]*?<\/style>/gi, '');
+  store = noCss(store);
+  checkout = noCss(checkout);
   const out: Blocker[] = [];
   const ld = [...store.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => { try { return JSON.parse(m[1]); } catch { return null; } });
   const products = ld.flatMap((d) => (d?.['@graph'] ?? [d])).filter((x) => x && /Product/.test(String(x['@type'])));
