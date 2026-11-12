@@ -160,7 +160,9 @@ export const paypal: PayPalClient = {
   },
 
   async listEvents(since): Promise<PayPalEvent[]> {
-    const q = new URLSearchParams({ page_size: '50', start_time: since });
+    // PayPal rejects fractional seconds here: "2026-11-12T06:14:23Z" works, "...23.297Z" is a 400.
+    const startTime = new Date(since).toISOString().replace(/\.\d{3}Z$/, 'Z');
+    const q = new URLSearchParams({ page_size: '50', start_time: startTime });
     const d = await call('GET', `/v1/notifications/webhooks-events?${q}`);
     return d.events ?? [];
   },
