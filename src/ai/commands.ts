@@ -56,7 +56,7 @@ register('explain', {
 function rerunOptions(args: string[], r: DrillResult) {
   const start = flag(args, 'start');
   if (!start) return null;
-  const forwardTo = flag(args, 'rerun-url') ?? r.forwardTo;
+  const forwardTo = flag(args, 'rerun-url') || r.forwardTo; // empty from CI inputs means unset
   const scenarios = r.scenarios.map((s) => s.scenario);
   return (cwd: string) => rerunDrill({ cwd, start, forwardTo, scenarios: scenarios.length ? scenarios : ['payment', 'refund'], log: console.log });
 }

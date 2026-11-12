@@ -1,0 +1,44 @@
+# Drills the demo shop with real PayPal sandbox events on PRs that touch it.
+# The demo shop has four bugs planted on purpose, so this job is expected to FAIL and comment the findings.
+# Needs repository secrets PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET (sandbox). Without them the job skips.
+name: paydrill demo-shop drill
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['examples/demo-shop/**', 'action/**', 'src/drill.ts', 'src/relay/**', '.github/workflows/paydrill.yml']
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEYS: ${{ secrets.PAYPAL_CLIENT_ID != '' && secrets.PAYPAL_CLIENT_SECRET != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip without sandbox keys
+        if: env.HAS_KEYS != 'true'
+        run: echo "::notice::Add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET as repository secrets to run the drill."
+      - uses: actions/setup-node@v4
+        if: env.HAS_KEYS == 'true'
+        with:
+          node-version: '22'
+      - name: Start the demo shop
+        if: env.HAS_KEYS == 'true'
+        working-directory: examples/demo-shop
+        env:
+          PAYPAL_CLIENT_ID: ${{ secrets.PAYPAL_CLIENT_ID }}
+          PAYPAL_CLIENT_SECRET: ${{ secrets.PAYPAL_CLIENT_SECRET }}
+        run: |
+          npm ci --no-audit --no-fund
+          (PORT=4242 node server.js > shop.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://localhost:4242/ > /dev/null && exit 0; sleep 1; done
+          cat shop.log; exit 1
+      - uses: ./action
+        if: env.HAS_KEYS == 'true'
+        with:
+          forward-to: http://localhost:4242/webhooks/paypal
+          scenarios: payment,refund
+          project: examples/demo-shop
+          paypal-client-id: ${{ secrets.PAYPAL_CLIENT_ID }}
+          paypal-client-secret: ${{ secrets.PAYPAL_CLIENT_SECRET }}
