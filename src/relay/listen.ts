@@ -1,5 +1,9 @@
+import React from 'react';
+import { render } from 'ink';
 import { register } from '../registry.js';
-import { startRelay, formatDelivery } from './relay.js';
+import { startRelay, formatDelivery, forward } from './relay.js';
+import { forgeEvent } from './chaos.js';
+import { ListenView } from '../ui/ListenView.js';
 import type { DrillEvent } from '../contract.js';
 
 function flag(args: string[], name: string): string | undefined {
@@ -8,7 +12,7 @@ function flag(args: string[], name: string): string | undefined {
 }
 
 register('listen', {
-  describe: 'Forward real sandbox events to your app: paydrill listen --forward-to <url>',
+  describe: 'Forward real sandbox events to your app: paydrill listen --forward-to <url> [--output compact]',
   async run(args) {
     const forwardTo = flag(args, 'forward-to');
     if (!forwardTo) throw new Error('--forward-to is required, e.g. --forward-to http://localhost:3000/webhooks/paypal');
@@ -17,14 +21,41 @@ register('listen', {
       port: Number(flag(args, 'port') ?? 4807),
       backfill: !args.includes('--no-backfill'),
     });
-    console.log(`Ready. Forwarding sandbox events to ${forwardTo}`);
-    console.log(`Webhook id (verify signatures in your app with this): ${relay.webhookId}`);
-    console.log('Ctrl-C stops and removes the webhook.\n');
-    relay.bus.on('delivery', (d: DrillEvent) => console.log(formatDelivery(d)));
-    relay.bus.on('warn', (w: string) => console.log(`  warn: ${w}`));
-    const stop = async () => { await relay.close(); process.exit(0); };
-    process.on('SIGINT', stop);
-    process.on('SIGTERM', stop);
-    await new Promise(() => {});
+    const stop = async () => { await relay.close(); };
+    const interactive = process.stdout.isTTY && (flag(args, 'output') ?? 'interactive') === 'interactive';
+
+    if (!interactive) {
+      console.log(`Ready. Forwarding sandbox events to ${forwardTo}`);
+      console.log(`Webhook id (verify signatures in your app with this): ${relay.webhookId}`);
+      console.log('Ctrl-C stops and removes the webhook.\n');
+      relay.bus.on('delivery', (d: DrillEvent) => console.log(formatDelivery(d)));
+      relay.bus.on('warn', (w: string) => console.log(`  warn: ${w}`));
+      const onSignal = async () => { await stop(); process.exit(0); };
+      process.on('SIGINT', onSignal);
+      process.on('SIGTERM', onSignal);
+      await new Promise(() => {});
+      return;
+    }
+
+    const resend = async (d: DrillEvent, source: DrillEvent['source'], event = d.event, headers = d.headers, signature = d.signature): Promise<DrillEvent> => {
+      const response = await forward(forwardTo, event, headers, source, signature);
+      return { event, headers, source, signature, response, receivedAt: new Date().toISOString() };
+    };
+    const app = render(React.createElement(ListenView, {
+      forwardTo,
+      webhookId: relay.webhookId,
+      subscribe: (onEvent, onWarn) => {
+        relay.bus.on('delivery', onEvent);
+        relay.bus.on('warn', onWarn);
+        return () => { relay.bus.off('delivery', onEvent); relay.bus.off('warn', onWarn); };
+      },
+      actions: {
+        replay: (d) => resend(d, 'live-retry'),
+        duplicate: (d) => resend(d, 'chaos-duplicate'),
+        forge: (d) => resend(d, 'chaos-forged', forgeEvent(d.event), {}, 'unsigned'),
+        quit: stop,
+      },
+    }), { exitOnCtrlC: false });
+    await app.waitUntilExit();
   },
 });

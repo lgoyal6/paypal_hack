@@ -11,17 +11,24 @@
     "dist"
   ],
   "engines": {
-    "node": ">=20.12"
+    "node": ">=22"
   },
   "scripts": {
     "build": "tsc -p .",
     "dev": "tsx src/cli.ts",
-    "typecheck": "tsc -p . --noEmit"
+    "typecheck": "tsc -p . --noEmit",
+    "test": "tsx --test test/"
   },
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "ink-testing-library": "^4.0.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "ink": "^8.0.0",
+    "react": "^19.3.1"
   }
 }
