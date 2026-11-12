@@ -83,6 +83,146 @@ Then `paydrill trigger angry-customer`.
 | Tunnel options | cloudflared by default, ngrok or your own URL if you have one |
 | PayPal AI-Toolkit | If installed, `doctor` reuses its best-practices skill |
 
+## Beyond Stripe: six features Stripe does not have
+
+What Stripe already has (Sessions 2026): an MCP server, account-wide sandboxes, Workbench monitoring of API traffic and integration health, a hosted read-only Stripe Database, and CLI plugins ([Stripe](https://stripe.com/blog/everything-we-announced-at-sessions-2026)). None of the six below appeared in what we checked. Treat "Stripe does not have it" as "not found in their announcements and docs", not as proven.
+
+### 1. `paydrill migrate`: leave Stripe in one command
+
+Point it at an app built on Stripe. It rewrites the payment code for PayPal, then proves the new code behaves the same. Full design in [paydrill migrate: design](#paydrill-migrate-design) below.
+
+### 2. Payment coverage
+
+Like code coverage, but for payment events.
+
+```
+paydrill coverage
+  handled    6 / 23 event types your account can emit
+  missing    PAYMENT.CAPTURE.REVERSED, CUSTOMER.DISPUTE.RESOLVED, PAYMENT.CAPTURE.DENIED, ...
+  exercised  4 / 6 handled types were hit by a real drill event
+```
+
+- **How:** static detection of which event types the handler switches on (AST first, AI only for unusual dispatch patterns), crossed with the event types the drill actually delivered and the handler answered with 2xx.
+- **Output:** terminal table, `coverage.json`, a README badge, and a PR comment from the GitHub Action.
+- **Done when:** the demo shop reports its real number, and the number goes up after `paydrill fix`.
+
+### 3. `paydrill types`: real payloads, real types, drift alerts
+
+- Records real sandbox events and generates TypeScript types plus zod validators from their actual shapes.
+- Stores a snapshot per event type. On later runs, diffs new events against the snapshot and warns on drift: a field renamed, removed or changed type.
+- This is the exact bug in the demo shop: disputes carry `dispute_amount`, not `amount`.
+- **Done when:** `paydrill types` writes `paypal-events.ts` from recorded events, and a doctored snapshot triggers a visible drift warning.
+
+### 4. Dispute timeline rehearsal
+
+Runs a full dispute lifecycle and checks the app reacts at every stage:
+1. Dispute opened.
+2. Dispute escalated.
+3. Evidence due.
+4. Evidence submitted.
+5. Dispute resolved.
+
+```
+paydrill rehearse dispute --evidence ai
+```
+
+- **How:**
+  - Real sandbox disputes via process-chargeback.
+  - Escalation timing from the sandbox amount rule: $5 to $5.99 escalates on day 5, $9 to $9.99 on day 9, $11 and up on day 11.
+  - `require-evidence` to request evidence.
+  - `adjudicate` to decide the outcome.
+- **AI step:** drafts the evidence response from the order data (shipping, receipts, messages) and submits it through the Disputes API.
+- **Pass/fail:** at each stage the handler must answer 2xx. The report shows a timeline with the app's response at every step.
+- **Stripe gap:** Stripe's test clocks only fast-forward subscriptions, not disputes.
+- **Done when:** one dispute goes from opened to resolved in the sandbox, with the evidence submitted by the AI visible in the report.
+
+### 5. Agent-readiness test
+
+An AI shopper tries to buy from your local store and reports where AI agents get stuck.
+
+- **How:**
+  - A Playwright-driven agent gets a goal, for example "buy the cheapest blue mug under $20".
+  - It reports blockers: CAPTCHAs, prices only visible after login, missing structured product data, checkout steps that need a human.
+  - It completes the purchase with PayPal in sandbox.
+- **Output:** an agent-readiness score and a list of blockers, each with a fix.
+- **Why:** PayPal is pushing agentic commerce ("agent ready"). This tells a merchant whether agents can actually buy from them. It aims the project at the Agentic Commerce prize too.
+- **Done when:** the agent buys from the demo store in sandbox, and fails visibly on a version with a planted blocker.
+
+### 6. Self-healing PRs
+
+- When the drill fails in CI, the GitHub Action runs `paydrill fix` on a new branch and opens a PR.
+- The PR body contains the failing drill (red) and the rerun (green) as proof.
+- It never pushes to the main branch and never merges; a human reviews.
+- **Done when:** a failing PR on the demo repo produces a fix PR whose own CI run is green.
+
+## paydrill migrate: design
+
+The goal is a migration that is provably correct for what it claims, and loudly honest about everything else.
+
+### Supported scope (v1)
+
+| Stripe | PayPal | Status |
+|---|---|---|
+| PaymentIntents / Checkout Session, one-time payment | Orders v2 create + capture | Supported |
+| Stripe.js Elements / Payment Element (card form) | PayPal JS SDK Buttons + Card Fields | Supported |
+| Refunds (full and partial) | `POST /v2/payments/captures/{id}/refund` | Supported |
+| `stripe.webhooks.constructEvent` | `POST /v1/notifications/verify-webhook-signature` | Supported |
+| `payment_intent.succeeded`, `checkout.session.completed` | `PAYMENT.CAPTURE.COMPLETED` | Supported |
+| `charge.refunded` | `PAYMENT.CAPTURE.REFUNDED` | Supported |
+| `charge.dispute.created` / `charge.dispute.closed` | `CUSTOMER.DISPUTE.CREATED` / `CUSTOMER.DISPUTE.RESOLVED` | Supported |
+| `Idempotency-Key` header | `PayPal-Request-Id` header | Supported |
+| Amounts in integer minor units (`1200`) | Decimal strings (`"12.00"`), zero-decimal currencies like JPY handled | Supported, deterministic conversion with tests |
+| `metadata` | `custom_id` / `invoice_id` (127 characters max) | Partial: flag anything that does not fit |
+| Customers + saved cards | Vault (payment method tokens) | Partial: flagged for human review |
+| Subscriptions, Prices, Products | Catalog Products + Billing Plans + Subscriptions | Partial: no proration, metered billing or coupon parity, so flagged |
+| Connect, Issuing, Terminal, Treasury, Radar rules, Stripe Tax, Billing portal | none | Not supported: refused with the reason |
+
+### How it stays sound
+
+1. **Inventory first, deterministically.** Parse the code with an AST (ts-morph / Babel) and list every Stripe SDK call, webhook event type, and Stripe.js usage, with file and line. No AI in this step, so nothing is missed or invented.
+2. **Classify every item** against the table: supported, partial, or not supported. Print the inventory before touching any code.
+3. **Deterministic codemods for supported items.** Mechanical rewrites (amount conversion, headers, event-type mapping, signature verification) are codemods, not model output.
+4. **AI only for glue.** The model writes the code a codemod cannot (restructuring a checkout flow, wiring the PayPal JS SDK). It is constrained to the mapping table, and every AI edit must type-check (`tsc`) and pass the parity drill or it is rolled back.
+5. **Parity drill proves behavior.**
+   - For every Stripe flow in the inventory, run the original app in Stripe test mode (Stripe CLI `trigger`).
+   - Run the migrated app against real PayPal sandbox events (paydrill `trigger`).
+   - Spy on the app's own business functions (for example `fulfillOrder`, `markRefunded`), and require the same calls with the same arguments in both runs, with amounts normalized.
+   - Same business effect for the same scenario means parity. HTTP 200 alone does not count.
+6. **Never in place.** Work happens on a new git branch. The output is a diff plus `MIGRATION_REPORT.md`. Nothing is committed to the user's main branch.
+7. **Honest exit code.** Non-zero unless every item is Verified. `--allow-partial` downgrades this to a warning, still listing every gap.
+
+### The migration report
+
+Every inventory item lands in exactly one bucket:
+
+| Bucket | Meaning |
+|---|---|
+| Verified | Migrated, and the parity drill proved the same business effect |
+| Migrated, unverified | Code rewritten, but no parity scenario could exercise it |
+| Needs human | Partial mapping; the report says exactly what differs and what to decide |
+| Not migrated | Unsupported or failed; the Stripe code is left untouched and the reason is stated |
+
+The CLI prints the four counts in color at the end. A run is never summarized as "migrated" unless every item is Verified.
+
+### Demo target
+
+A small open-source Stripe sample app (a candidate is `stripe-samples/accept-a-payment`; confirm its license before using it), migrated live, with the parity drill showing the same fulfillment calls on Stripe and on PayPal.
+
+### Fallback
+
+If full migration is not reliable by the P1 checkpoint, ship `paydrill migrate --plan`. It runs the inventory and classification, prints the diff it would apply, and produces the report with every item marked "Migrated, unverified" or worse, and says so.
+
+### Rules for the AI agent building `migrate`
+
+Any agent (Claude, Codex, or a teammate's tool) working on this command must follow these:
+
+1. Never report `migrate` as working without pasting the parity drill output from a real run: Stripe test mode on one side, PayPal sandbox on the other.
+2. If any mapping fails, say so at the top of the status update, in plain words: what failed, the error, and which report bucket it landed in. Do not bury it under what worked.
+3. Never mock the PayPal side, never fake a parity result, never weaken an assertion to make a run pass, and never silently drop a Stripe feature from the inventory.
+4. If something only works in a narrower case than claimed (for example, one-time payments only), state the narrower claim in the README and in the CLI output.
+5. If blocked (missing keys, a sandbox endpoint failing, a license question), stop and ask instead of working around it.
+6. Keep the "Known gaps" section of the README current with every failure found.
+
 ## Pressure test
 
 | Test | Result |
@@ -108,19 +248,24 @@ Then `paydrill trigger angry-customer`.
 - `init` wizard and zero-flag defaults.
 - `paydrill.yml` scenarios with assertions.
 - `fix` with the red to green rerun.
+- Payment coverage and `paydrill types` (cheap, visual).
+- Dispute timeline rehearsal.
+- `paydrill migrate`: inventory, codemods and parity drill on the demo target. Checkpoint: if not reliable, ship `migrate --plan`.
 - MCP server.
 
 **P2, connectivity polish:**
-- GitHub Action with PR comment.
+- GitHub Action with PR comment and coverage badge.
+- Self-healing PRs.
 - Web inspector.
 - `ask`.
 - `record` / `replay`.
 - Claude Code plugin.
 
 **P3, only if solid:**
+- Agent-readiness test (move up if we target the Agentic Commerce prize).
 - Multi-app routing.
 - Alternative tunnels.
-- Subscriptions.
+- Subscriptions in `migrate`.
 
 **Not now:**
 - Live mode.
@@ -136,9 +281,10 @@ Then `paydrill trigger angry-customer`.
 | 0:20 | `npx paydrill init`: wizard detects the Express app. |
 | 0:40 | `paydrill trigger dispute`: a real chargeback event lands in the terminal UI. |
 | 1:10 | `paydrill drill`: red. Forged payment accepted, dispute crash, unknown event 500. Claude names the lines. |
-| 1:50 | `paydrill fix`: patch applied, rerun goes green. |
-| 2:20 | Claude Code drives paydrill over MCP; the GitHub Action posts a PR comment. |
-| 2:45 | Close: PayPal's sandbox, finally better than Stripe's. |
+| 1:40 | `paydrill fix`: patch applied, rerun goes green, coverage climbs. |
+| 2:00 | `paydrill migrate` on a Stripe sample app: inventory, diff, parity drill shows the same fulfillment calls on Stripe and PayPal, report with honest buckets. |
+| 2:35 | The GitHub Action posts coverage and a self-healing PR. |
+| 2:50 | Close: Stripe's CLI helps you build on Stripe. paydrill helps you build on PayPal, and leave Stripe in one command. |
 
 ## Checkpoints and kill conditions
 
@@ -146,6 +292,9 @@ Then `paydrill trigger angry-customer`.
 - **Chargeback endpoint fails:** drop dispute scenarios, fall back to refunds plus simulator dispute events, labeled as simulated.
 - **Ink UI not solid by the P1 checkpoint:** ship compact mode plus the web inspector.
 - **MCP flaky:** the GitHub Action carries the connectivity story.
+- **`migrate` parity not proven on the demo target:** ship `migrate --plan`, and say in the video and README that full migration is unverified.
+- **Dispute rehearsal stalls at a stage (no `adjudicate` link offered):** show the timeline up to that stage and label the rest as not reachable in sandbox.
+- **Agent shopper cannot complete a sandbox PayPal checkout:** keep the readiness report (blockers found) and drop the purchase step.
 
 ## Open questions
 
