@@ -33,7 +33,14 @@ function showEntry(row) {
   for (const [key, val] of Object.entries({ Status: row.status, Signature: row.signature, Source: row.source, Latency: row.latency })) {
     dl.append(make('dt', key), make('dd', val));
   }
-  id('detail').replaceChildren(make('h3', row.event), dl, make('p', row.note));
+  const detail = id('detail');
+  detail.replaceChildren(make('h3', row.event), dl, make('p', row.note));
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    detail.animate([{ opacity: 0.55, transform: 'translateY(5px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 230 });
+  }
+  for (const button of document.querySelectorAll('[data-example]')) {
+    button.setAttribute('aria-pressed', String(entries[Number(button.dataset.example)] === row));
+  }
 }
 showEntry(entries[0]);
 const gridOptions = {
@@ -53,6 +60,13 @@ const gridOptions = {
 };
 const api = window.agGrid?.createGrid(id('event-grid'), gridOptions);
 const filter = id('event-filter');
+for (const button of document.querySelectorAll('[data-example]')) {
+  button.addEventListener('click', () => {
+    filter.value = '';
+    filter.dispatchEvent(new Event('input'));
+    showEntry(entries[Number(button.dataset.example)]);
+  });
+}
 function showFallback() {
   const q = filter.value.toLowerCase();
   const rows = entries.filter(row => Object.values(row).some(v => String(v).toLowerCase().includes(q)));
