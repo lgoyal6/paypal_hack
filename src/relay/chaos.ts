@@ -21,12 +21,17 @@ export async function runChaos(forwardTo: string, real: DrillEvent[], slowMs = 3
     checks.push({ check: 'out-of-order', eventType: d.event.event_type, pass: ok(r.status), response: r });
   }
 
-  const money = real.find((d) => (d.event.resource as { amount?: unknown }).amount) ?? real[0];
+  const money = real.find((d) => {
+    const r = d.event.resource as { amount?: unknown; dispute_amount?: unknown };
+    return r.amount || r.dispute_amount;
+  }) ?? real[0];
   if (money) {
     const forged: PayPalEvent = structuredClone(money.event);
     forged.id = `WH-FORGED-${Date.now()}`;
-    const res = forged.resource as { amount?: { value?: string } };
+    // Payments carry amount, disputes carry dispute_amount (see fixtures/README.md).
+    const res = forged.resource as { amount?: { value?: string }; dispute_amount?: { value?: string } };
     if (res.amount) res.amount.value = '9999.00';
+    if (res.dispute_amount) res.dispute_amount.value = '9999.00';
     // No paypal-* signature headers: a handler that verifies signatures must reject this.
     const r = await forward(forwardTo, forged, {}, 'chaos-forged', 'unsigned');
     checks.push({
