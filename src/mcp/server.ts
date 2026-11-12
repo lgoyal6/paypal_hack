@@ -1,6 +1,7 @@
 // paydrill as an MCP server, so Claude Code, Cursor or Codex can trigger real sandbox events and run drills.
 // Sits next to PayPal's own MCP: theirs moves money, this one tests your code.
 // stdout belongs to the MCP protocol; every human log goes to stderr.
+import fs from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -84,6 +85,44 @@ export function buildServer(): McpServer {
     annotations: { readOnlyHint: true },
   }, async () => {
     try { return json(await listPool()); } catch (e) { return fail(e); }
+  });
+
+  // ---------- AI lane: explain and fix a drill (Claude via API key, or the user's Claude Code) ----------
+  const drillResult = z.string().describe('Path to a drill result JSON (paydrill drill --out result.json)');
+  const project = z.string().default('.').describe('Project directory with the webhook handler');
+
+  server.registerTool('explain', {
+    title: 'Explain a drill',
+    description: 'Claude explains each failed check with the file and line responsible and a one-line fix. Pass/fail is not changed; it comes from the drill.',
+    inputSchema: { drillResult, project },
+    annotations: { readOnlyHint: true },
+  }, async ({ drillResult: file, project: dir }) => {
+    try {
+      const { verdict } = await import('../ai/verdict.js');
+      const { readCodeFiles } = await import('../ai/llm.js');
+      return json(await verdict(JSON.parse(fs.readFileSync(file, 'utf8')), null, readCodeFiles(dir)));
+    } catch (e) { return fail(e); }
+  });
+
+  server.registerTool('fix', {
+    title: 'Fix a failed drill on a new branch',
+    description: 'Claude writes a patch for the failed checks and commits it on a new branch in a separate git worktree. The working tree is not touched and nothing is merged.',
+    inputSchema: { drillResult, project },
+    annotations: { destructiveHint: false },
+  }, async ({ drillResult: file, project: dir }) => {
+    try {
+      const { verdict } = await import('../ai/verdict.js');
+      const { fix } = await import('../ai/fix.js');
+      const { applyOnBranch } = await import('../ai/branch.js');
+      const { readCodeFiles } = await import('../ai/llm.js');
+      const files = readCodeFiles(dir);
+      const v = await verdict(JSON.parse(fs.readFileSync(file, 'utf8')), null, files);
+      if (v.verdict === 'ship') return json({ verdict: v, patch: null, note: 'Nothing to fix.' });
+      const patch = await fix(v, files);
+      if (!patch.diff) return json({ verdict: v, patch: null, note: 'Claude proposed no change.' });
+      const out = applyOnBranch(dir, patch, `paydrill/fix-${Date.now().toString(36)}`, `Fix webhook handler (paydrill)\n\n${v.summary}`);
+      return json({ verdict: v, diff: patch.diff, branch: out.branch, worktree: out.worktree });
+    } catch (e) { return fail(e); }
   });
 
   return server;
