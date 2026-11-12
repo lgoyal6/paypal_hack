@@ -25,13 +25,14 @@ migrate parity ── ParityResult ◀────────── migrate inv
 3. **Pass or fail is never decided by the AI.** `CheckResult.pass` comes from HTTP results and assertions. The AI explains and suggests fixes only.
 4. **Errors are thrown, not swallowed.** PayPal failures throw `PayPalError` with the HTTP status and PayPal's `debug_id`.
 5. **Patches are unified diffs applied on a branch,** never written straight into the user's working tree.
-6. **No mocks in the demo or in claims.** Fixtures are for development only. See the `migrate` agent rules in [PLAN.md](PLAN.md#rules-for-the-ai-agent-building-paydrill-migrate).
+6. **Simulated is always labeled.** When the sandbox cannot produce an event for real (today: `CUSTOMER.DISPUTE.RESOLVED`), paydrill may ask PayPal's own webhook simulator for it. Those deliveries carry source `paypal-simulated`, the scenario lists them in `simulated`, and every report, UI and the video say "simulated by PayPal" next to them. The simulated payload is PayPal's mock, not tied to the scenario's real dispute.
+7. **No other mocks in the demo or in claims.** Fixtures are for development only. See the `migrate` agent rules in [PLAN.md](PLAN.md#rules-for-the-ai-agent-building-paydrill-migrate).
 
 ## Fixtures
 
 - `fixtures/events/<EVENT_TYPE>.json`: one `PayPalEvent` per file.
 - Until Laksh records real sandbox events, these are PayPal's documented example payloads, with `"_source": "docs"` added at the top level.
-- Real recordings replace them with `"_source": "sandbox"`. Tijil's code must not depend on `_source`.
+- Real recordings replace them with `"_source": "sandbox"`. Events from PayPal's webhook simulator use `"_source": "paypal-simulator"`. Tijil's code must not depend on `_source`.
 
 ## Environment
 
